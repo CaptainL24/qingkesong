@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Worker Companion - Workspace Session Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Antonio:wght=700&family=Plus+Jakarta+Sans:wght=300;400;500;700;800&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+    <style>
+        :root {
+            --accent: #ff007f; /* Identity Hot Pink */
+            --bg-studio: #f4f3ef; /* High-end studio warm gray */
+            --panel-glass: rgba(255, 255, 255, 0.75);
+            --text-main: #111111;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-studio);
+            color: var(--text-main);
+            overflow: hidden;
+        }
+        .display-font {
+            font-family: 'Antonio', sans-serif;
+            text-transform: uppercase;
+        }
+        /* Unseen-inspired architectural grid border overlays */
+        .studio-border {
+            border-color: rgba(17, 17, 17, 0.06);
+        }
+        /* Custom styled tracking metrics scrollbarless view */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Premium Glow Pulse for active Metronome Node */
+        @keyframes beatPulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 0, 127, 0.4); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(255, 0, 127, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 0, 127, 0); }
+        }
+        .active-pulse-node {
+            animation: beatPulse 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            background-color: var(--accent) !important;
+            color: #ffffff !important;
+        }
+        /* Soft Unseen Glassmorphism blur elements */
+        .glass-panel {
+            background: var(--panel-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        /* Skeleton mapping canvas overlay blending mode */
+        #canvas {
+            mix-blend-mode: difference;
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen m-0 p-0 select-none overflow-hidden">
+
+    <div class="absolute inset-0 pointer-events-none border-x [margin:0_4vw] studio-border z-40"></div>
+    <div class="absolute inset-0 pointer-events-none border-y [margin:4vh_0] studio-border z-40"></div>
+
+    <div class="w-full h-full flex flex-col md:flex-row p-6 md:p-12 relative z-10 gap-6">
+        
+        <div class="w-full md:w-[28vw] h-full flex flex-col justify-between z-20">
+            <div class="flex flex-col">
+                <span class="display-font text-xs tracking-[0.3em] text-neutral-400 font-bold mb-2">SESSION CHANNEL 01</span>
+                <h1 class="text-3xl md:text-5xl font-black tracking-tighter leading-none text-neutral-900">
+                    颈椎运动<br><span class="text-neutral-300 italic font-serif font-normal text-2xl md:text-4xl">八拍空间站</span>
+                </h1>
+                
+                <div class="mt-8 glass-panel border studio-border rounded-2xl p-5 shadow-[0_15px_40px_rgba(0,0,0,0.03)] relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-1 h-full bg-[#ff007f]"></div>
+                    <span class="text-[10px] tracking-widest font-mono font-bold text-neutral-400 block mb-1">TARGET LANDMARK ACTION</span>
+                    <div id="poseLabel" class="text-xl font-bold tracking-tight text-neutral-900">正在初始化设备...</div>
+                    <div id="poseDesc" class="text-xs text-neutral-400 mt-1 leading-relaxed">请确保面部及上半身完全处于中央摄像矩阵工作区。</div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div class="glass-panel border studio-border rounded-2xl p-4 shadow-[0_15px_40px_rgba(0,0,0,0.02)]">
+                        <span class="text-[9px] tracking-widest font-mono font-bold text-neutral-400 block">TOTAL METRIC SCORE</span>
+                        <div id="scoreVal" class="display-font text-4xl font-bold tracking-tight text-neutral-900 mt-1">000</div>
+                    </div>
+                    <div class="glass-panel border studio-border rounded-2xl p-4 shadow-[0_15px_40px_rgba(0,0,0,0.02)] relative overflow-hidden">
+                        <span class="text-[9px] tracking-widest font-mono font-bold text-neutral-400 block">COMBO RHYTHM</span>
+                        <div id="comboVal" class="display-font text-4xl font-bold tracking-tight text-[#ff007f] mt-1">00</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col space-y-3 pb-4">
+                <div class="flex items-center space-x-3 bg-white/50 border studio-border px-4 py-2.5 rounded-full text-xs">
+                    <span class="w-2 h-2 rounded-full bg-[#ff007f] animate-ping"></span>
+                    <span id="camBadge" class="font-mono font-bold tracking-wider text-neutral-500 uppercase">SYS: STANDBY</span>
+                </div>
+                <div class="flex gap-2">
+                    <button id="toggleCamBtn" class="flex-1 bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold py-3 px-6 rounded-full transition-all tracking-widest shadow-lg shadow-neutral-900/10 uppercase">
+                        切换摄像头
+                    </button>
+                    <button id="skipCalibrationBtn" class="bg-white/80 hover:bg-white border studio-border text-neutral-700 text-xs font-bold py-3 px-5 rounded-full transition-all tracking-widest uppercase">
+                        跳过校准
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 h-full flex items-center justify-center relative">
+            <div id="mainViewportFrame" class="w-full max-w-[65vh] aspect-[4/3] bg-white rounded-[32px] shadow-[0_50px_100px_rgba(0,0,0,0.05)] border border-white p-4 relative overflow-hidden transition-all duration-700">
+                <div class="w-full h-full rounded-[20px] bg-neutral-50 overflow-hidden relative shadow-inner">
+                    <video id="video" class="absolute inset-0 w-full h-full object-cover transform -scale-x-100 opacity-80 mix-blend-multiply" playsinline></video>
+                    <canvas id="canvas" class="absolute inset-0 w-full h-full transform -scale-x-100 z-10"></canvas>
+                    <div id="countdownOverlay" class="absolute inset-0 bg-white/95 z-20 flex flex-col items-center justify-center transition-all duration-500 pointer-events-none opacity-100">
+                        <span class="text-[10px] tracking-[0.4em] font-mono font-bold text-neutral-400 mb-2 uppercase">PREPARING CAPTURE ARRAY</span>
+                        <div id="countdownNum" class="display-font text-8xl font-bold tracking-tighter text-neutral-900">READY</div>
+                    </div>
+                </div>
+                <div class="absolute top-6 left-6 font-mono text-[9px] tracking-widest text-neutral-400 uppercase pointer-events-none">OPTICAL CAPTURE ZONE</div>
+                <div class="absolute bottom-6 right-6 font-mono text-[9px] tracking-widest text-neutral-400 uppercase pointer-events-none">REF: 1280X720 // 60FPS</div>
+            </div>
+        </div>
+
+        <div class="w-full md:w-[20vw] h-full flex flex-col justify-between z-20">
+            <div class="flex flex-col h-full">
+                <span class="display-font text-xs tracking-[0.3em] text-neutral-400 font-bold mb-4">RHYTHM SEQUENCE</span>
+                <div class="flex-1 space-y-2 no-scrollbar overflow-y-auto pr-1" id="nodesContainer">
+                    </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="resultPanel" class="fixed inset-0 bg-white z-[100] flex flex-col justify-between p-8 md:p-16 transition-all duration-1000 transform translate-y-full opacity-0">
+        <div class="flex justify-between items-center w-full">
+            <div class="display-font text-xs tracking-widest font-bold text-[#ff007f]">WORKSTATION SESSION COMPLETED</div>
+            
+            <div class="flex items-center space-x-6">
+                <div class="font-mono text-[10px] tracking-widest opacity-40 uppercase hidden lg:block">DATA SUMMARY REPORT</div>
+                <button id="backToPetBtn" class="bg-neutral-900/5 backdrop-blur-xl hover:bg-neutral-900/10 border border-neutral-900/10 text-neutral-900 display-font text-sm font-bold tracking-widest px-8 py-4 rounded-full transition-all shadow-sm">
+                    回到桌宠模式
+                </button>
+            </div>
+        </div>
+
+        <div class="my-auto flex flex-col max-w-4xl">
+            <span class="display-font text-[12vw] font-black leading-none tracking-tighter text-neutral-900" id="finalEvalText">EXCELLENT</span>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mt-12 border-t border-neutral-100 pt-8">
+                <div>
+                    <span class="text-[10px] tracking-widest font-mono font-bold text-neutral-400 uppercase">FINAL MATRIX SCORE</span>
+                    <div id="resScore" class="display-font text-5xl font-bold text-neutral-900 mt-2">000</div>
+                </div>
+                <div>
+                    <span class="text-[10px] tracking-widest font-mono font-bold text-neutral-400 uppercase">MAX COMBO STREAK</span>
+                    <div id="resMaxCombo" class="display-font text-5xl font-bold text-[#ff007f] mt-2">00</div>
+                </div>
+                <div>
+                    <span class="text-[10px] tracking-widest font-mono font-bold text-neutral-400 uppercase">PERFECT HIT CORES</span>
+                    <div id="resPerfect" class="display-font text-5xl font-bold text-neutral-900 mt-2">00</div>
+                </div>
+                <div>
+                    <span class="text-[10px] tracking-widest font-mono font-bold text-neutral-400 uppercase">MISS TERMINATIONS</span>
+                    <div id="resMiss" class="display-font text-5xl font-bold text-neutral-300 mt-2">00</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-end w-full border-t border-neutral-100 pt-6">
+            <div class="max-w-xs text-xs text-neutral-400 leading-relaxed font-light">
+                Session insights synced to your behavior companion module. Maintain optimal cervical ergonomics.
+            </div>
+            <button id="replayBtn" class="bg-neutral-900 hover:bg-neutral-800 text-white display-font text-sm font-bold tracking-widest px-8 py-4 rounded-full transition-all shadow-xl shadow-neutral-900/10">
+                RESTART SESSION
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- 1. CONFIGURATION & STATE TARGET DECLARATIONS ---
+        const beatsConfig = [
+            { id: 1, name: "拍子 1 (中立)", target: "neutral", desc: "挺胸抬头，目视前方，保持下颌微收" },
+            { id: 2, name: "拍子 2 (头部向左)", target: "head_left", desc: "慢速平稳将头部转向左侧极限" },
+            { id: 3, name: "拍子 3 (中立)", target: "neutral", desc: "缓慢原路返回中立核心位" },
+            { id: 4, name: "拍子 4 (头部向右)", target: "head_right", desc: "慢速平稳将头部转向右侧极限" },
+            { id: 5, name: "拍子 5 (中立)", target: "neutral", desc: "缓慢原路返回中立核心位" },
+            { id: 6, name: "拍子 6 (头部后仰)", target: "head_up", desc: "颈椎延展，将下巴缓慢朝向天花板抬起" },
+            { id: 7, name: "拍子 7 (中立)", target: "neutral", desc: "缓慢原路返回中立核心位" },
+            { id: 8, name: "拍子 8 (双手托颈后仰)", target: "head_up_hands", desc: "双手交叉托住颈后，头部后仰并给予微阻力" }
+        ];
+
+        let score = 0, combo = 0, maxCombo = 0, perfectCount = 0, goodCount = 0, missCount = 0;
+        let beatIndex = 0, isCalibrated = false, calibrationOffsets = { x: 0, y: 0, dist: 1 };
+        let countdownValue = null, started = false, finished = false;
+        let latestLandmarks = null, lastValidLandmarks = null;
+        let audioCtx = null, metronomeTimer = null, countdownTimer = null, animationTimer = null;
+        const beatScores = [];
+
+        // DOM elements binding
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const poseLabel = document.getElementById('poseLabel');
+        const poseDesc = document.getElementById('poseDesc');
+        const scoreVal = document.getElementById('scoreVal');
+        const comboVal = document.getElementById('comboVal');
+        const camBadge = document.getElementById('camBadge');
+        const mainViewportFrame = document.getElementById('mainViewportFrame');
+        const nodesContainer = document.getElementById('nodesContainer');
+
+        function renderSequencerNodes() {
+            nodesContainer.innerHTML = '';
+            beatsConfig.forEach((beat, idx) => {
+                const block = document.createElement('div');
+                block.id = `node-item-${idx}`;
+                block.className = "glass-panel border studio-border rounded-xl p-3 flex justify-between items-center transition-all duration-300";
+                block.innerHTML = `
+                    <div class="flex flex-col truncate pr-2">
+                        <span class="font-mono text-[9px] font-bold text-neutral-400 uppercase tracking-wider">BEAT 0${beat.id}</span>
+                        <span class="text-xs font-bold text-neutral-800 truncate mt-0.5">${beat.name}</span>
+                    </div>
+                    <div id="node-score-0${beat.id}" class="display-font text-xs font-bold tracking-widest text-neutral-300">WAITING</div>
+                `;
+                nodesContainer.appendChild(block);
+            });
+        }
+        renderSequencerNodes();
+
+        // --- 2. AUDIO MATRIX SYSTEM ---
+        function triggerAudioTone(frequency, waveType, length, gainVolume = 0.08) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                const osc = audioCtx.createOscillator();
+                const nodeGain = audioCtx.createGain();
+                osc.type = waveType;
+                osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+                nodeGain.gain.setValueAtTime(gainVolume, audioCtx.currentTime);
+                nodeGain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + length);
+                osc.connect(nodeGain);
+                nodeGain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + length);
+            } catch(e) { console.warn("Context blocked."); }
+        }
+
+        const executeTickSound = (high) => triggerAudioTone(high ? 1200 : 600, 'sine', 0.08, high ? 0.05 : 0.04);
+        const executeSuccessChime = () => {
+            triggerAudioTone(523.25, 'triangle', 0.2, 0.06);
+            setTimeout(() => triggerAudioTone(1046.50, 'sine', 0.3, 0.04), 80);
+        };
+
+        // --- 3. HIGH FIDELITY GEOMETRIC CALCULATION ---
+        function calculateAngle(pt1, pt2, pt3) {
+            const vectorA = { x: pt1.x - pt2.x, y: pt1.y - pt2.y };
+            const vectorB = { x: pt3.x - pt2.x, y: pt3.y - pt2.y };
+            const dotProduct = vectorA.x * vectorB.x + vectorA.y * vectorB.y;
+            const magA = Math.sqrt(vectorA.x * vectorA.x + vectorA.y * vectorA.y);
+            const magB = Math.sqrt(vectorB.x * vectorB.x + vectorB.y * vectorB.y);
+            if (magA * magB === 0) return 0;
+            let productCos = dotProduct / (magA * magB);
+            if (productCos > 1) productCos = 1;
+            if (productCos < -1) productCos = -1;
+            return Math.acos(productCos) * (180 / Math.PI);
+        }
+
+        // --- 4. MEDIAPIPE TRACKING MATRIX ---
+        const poseInstance = new Pose({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+        });
+
+        poseInstance.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            enableSegmentation: false,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        poseInstance.onResults((results) => {
+            if (results.poseLandmarks) {
+                latestLandmarks = results.poseLandmarks;
+                lastValidLandmarks = results.poseLandmarks;
+            }
+        });
+
+        function drawOpticalStickman(currentBeatIdx) {
+            if (!canvas || !ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const landmarks = latestLandmarks || lastValidLandmarks;
+            if (!landmarks) return;
+
+            const targets = [0, 11, 12, 13, 14, 15, 16]; 
+            const bounds = canvas.getBoundingClientRect();
+            if (canvas.width !== bounds.width || canvas.height !== bounds.height) {
+                canvas.width = bounds.width;
+                canvas.height = bounds.height;
+            }
+
+            function getCanvasCoordinates(landmarkItem) {
+                return { x: landmarkItem.x * canvas.width, y: landmarkItem.y * canvas.height };
+            }
+
+            targets.forEach(pt => {
+                const mark = landmarks[pt];
+                if (mark) {
+                    const coord = getCanvasCoordinates(mark);
+                    ctx.beginPath();
+                    ctx.arc(coord.x, coord.y, 5, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#ff007f';
+                    ctx.fill();
+                }
+            });
+
+            const boneConnections = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16]];
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(255, 0, 127, 0.4)';
+            boneConnections.forEach(([start, end]) => {
+                const nodeA = landmarks[start];
+                const nodeB = landmarks[end];
+                if (nodeA && nodeB) {
+                    const cA = getCanvasCoordinates(nodeA);
+                    const cB = getCanvasCoordinates(nodeB);
+                    ctx.beginPath();
+                    ctx.moveTo(cA.x, cA.y);
+                    ctx.lineTo(cB.x, cB.y);
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function updateDiagnosticHUD() {
+            if (finished) return;
+            if (!started) {
+                poseLabel.textContent = countdownValue === null ? "等待阵列就绪" : "系统阵列就绪";
+                return;
+            }
+            const activeConfig = beatsConfig[beatIndex];
+            if (activeConfig) {
+                poseLabel.textContent = activeConfig.name;
+                poseDesc.textContent = activeConfig.desc;
+            }
+            scoreVal.textContent = score.toString().padStart(3, '0');
+            comboVal.textContent = combo.toString().padStart(2, '0');
+        }
+
+        // --- 5. CORE TIMELINE MATRIX ---
+        function evaluateLivePostureAccuracy() {
+            const landmarks = latestLandmarks;
+            if (!landmarks) {
+                recordActionRating("MISS", 0);
+                return;
+            }
+
+            const nose = landmarks[0], lShoulder = landmarks[11], rShoulder = landmarks[12];
+            const midShoulder = { x: (lShoulder.x + rShoulder.x)/2, y: (lShoulder.y + rShoulder.y)/2 };
+            
+            if (!isCalibrated) {
+                calibrationOffsets.x = midShoulder.x;
+                calibrationOffsets.y = midShoulder.y;
+                calibrationOffsets.dist = Math.abs(lShoulder.x - rShoulder.x) || 1;
+                isCalibrated = true;
+            }
+
+            const currentTargetType = beatsConfig[beatIndex].target;
+            let finalAccuracy = 0;
+
+            const dx = (nose.x - midShoulder.x) / calibrationOffsets.dist;
+            const dy = (midShoulder.y - nose.y) / calibrationOffsets.dist;
+
+            if (currentTargetType === "neutral") {
+                let calculatedDiff = Math.sqrt(dx*dx + (dy - 0.7)*(dy - 0.7));
+                finalAccuracy = Math.max(0, 100 - calculatedDiff * 160);
+            } else if (currentTargetType === "head_left") {
+                finalAccuracy = dx < -0.15 ? 100 : Math.max(0, 40 + (-dx)*350);
+            } else if (currentTargetType === "head_right") {
+                finalAccuracy = dx > 0.15 ? 100 : Math.max(0, 40 + dx*350);
+            } else if (currentTargetType === "head_up" || currentTargetType === "head_up_hands") {
+                finalAccuracy = dy > 0.85 ? 100 : Math.max(0, 50 + (dy - 0.7)*300);
+            }
+
+            if (finalAccuracy >= 85) recordActionRating("PERFECT", 100);
+            else if (finalAccuracy >= 60) recordActionRating("GOOD", 70);
+            else recordActionRating("MISS", 0);
+        }
+
+        function recordActionRating(rating, baseScore) {
+            beatScores.push({ beat: beatIndex + 1, rating: rating, value: baseScore });
+            
+            const targetedNodeElement = document.getElementById(`node-score-0${beatIndex + 1}`);
+            if (targetedNodeElement) {
+                targetedNodeElement.textContent = rating;
+                if (rating === "PERFECT") targetedNodeElement.className = "display-font text-xs font-bold tracking-widest text-[#ff007f]";
+                else if (rating === "GOOD") targetedNodeElement.className = "display-font text-xs font-bold tracking-widest text-neutral-800";
+                else targetedNodeElement.className = "display-font text-xs font-bold tracking-widest text-neutral-300";
+            }
+
+            if (rating === "PERFECT" || rating === "GOOD") {
+                combo++;
+                if (combo > maxCombo) maxCombo = combo;
+                if (rating === "PERFECT") perfectCount++; else goodCount++;
+                score += baseScore + Math.floor(combo / 2) * 5;
+                mainViewportFrame.classList.add('shadow-[#ff007f]/5');
+                setTimeout(() => mainViewportFrame.classList.remove('shadow-[#ff007f]/5'), 300);
+            } else {
+                combo = 0;
+                missCount++;
+            }
+        }
+
+        function triggerNextBeatTimelineLoop() {
+            const oldItem = document.getElementById(`node-item-${beatIndex}`);
+            if (oldItem) oldItem.classList.remove('active-pulse-node');
+
+            beatIndex++;
+            if (beatIndex >= beatsConfig.length) {
+                terminateSessionWorkspace();
+                return;
+            }
+
+            executeTickSound(beatIndex === 0 || beatIndex === 4);
+            
+            const newItem = document.getElementById(`node-item-${beatIndex}`);
+            if (newItem) newItem.classList.add('active-pulse-node');
+
+            setTimeout(evaluateLivePostureAccuracy, 1800);
+        }
+
+        function startSequenceLoopEngine() {
+            started = true;
+            beatIndex = 0;
+            executeTickSound(true);
+
+            const initialItem = document.getElementById('node-item-0');
+            if (initialItem) initialItem.classList.add('active-pulse-node');
+
+            setTimeout(evaluateLivePostureAccuracy, 1800);
+            metronomeTimer = setInterval(triggerNextBeatTimelineLoop, 2000);
+        }
+
+        function startCaptureCountdown() {
+            document.getElementById('countdownOverlay').style.opacity = '1';
+            countdownValue = 3;
+            document.getElementById('countdownNum').textContent = countdownValue;
+            executeTickSound(false);
+
+            countdownTimer = setInterval(() => {
+                countdownValue--;
+                if (countdownValue <= 0) {
+                    clearInterval(countdownTimer);
+                    document.getElementById('countdownOverlay').style.opacity = '0';
+                    setTimeout(() => document.getElementById('countdownOverlay').style.display = 'none', 500);
+                    startSequenceLoopEngine();
+                } else {
+                    document.getElementById('countdownNum').textContent = countdownValue;
+                    executeTickSound(false);
+                }
+            }, 1000);
+        }
+
+        function terminateSessionWorkspace() {
+            finished = true;
+            clearInterval(metronomeTimer);
+            clearInterval(animationTimer);
+            executeSuccessChime();
+
+            document.getElementById('resScore').textContent = score.toString().padStart(3, '0');
+            document.getElementById('resMaxCombo').textContent = maxCombo.toString().padStart(2, '0');
+            document.getElementById('resPerfect').textContent = perfectCount.toString().padStart(2, '0');
+            document.getElementById('resMiss').textContent = missCount.toString().padStart(2, '0');
+
+            const evaluationText = document.getElementById('finalEvalText');
+            if (score >= 700) evaluationText.textContent = "ELITE MASTER";
+            else if (score >= 500) evaluationText.textContent = "EXCELLENT";
+            else if (score >= 300) evaluationText.textContent = "STABLE OPERATOR";
+            else evaluationText.textContent = "NEED FOCUS";
+
+            const resultsPane = document.getElementById('resultPanel');
+            resultsPane.classList.remove('translate-y-full', 'opacity-0');
+        }
+
+        // --- 6. EVENT BINDING & HARDWARE CAMERA PIPELINE ---
+        async function runHardwareCameraPipeline() {
+            try {
+                camBadge.textContent = "SYS: CONNECTING...";
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 1280, height: 720, facingMode: 'user' },
+                    audio: false
+                });
+                video.srcObject = stream;
+                await video.play();
+                camBadge.textContent = "SYS: ACTIVE";
+
+                const mediaPipeCameraInstance = new Camera(video, {
+                    onFrame: async () => { await poseInstance.send({ image: video }); },
+                    width: 1280,
+                    height: 720
+                });
+                mediaPipeCameraInstance.start();
+
+                animationTimer = setInterval(() => {
+                    if (!finished) drawOpticalStickman(beatIndex);
+                    updateDiagnosticHUD();
+                }, 60);
+
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                setTimeout(startCaptureCountdown, 800);
+            } catch(err) {
+                camBadge.textContent = "SYS: FAILED";
+                poseLabel.textContent = "摄像头访问受限";
+                poseDesc.textContent = String(err);
+            }
+        }
+
+        // Replay Session Action
+        document.getElementById('replayBtn').addEventListener('click', async () => {
+            document.getElementById('resultPanel').classList.add('translate-y-full', 'opacity-0');
+            clearInterval(countdownTimer);
+            clearInterval(metronomeTimer);
+            clearInterval(animationTimer);
+            
+            score = 0; combo = 0; maxCombo = 0; perfectCount = 0; goodCount = 0; missCount = 0;
+            beatIndex = 0; countdownValue = null; finished = false; started = false;
+            latestLandmarks = lastValidLandmarks || latestLandmarks;
+
+            renderSequencerNodes();
+            document.getElementById('countdownOverlay').style.display = 'flex';
+            document.getElementById('countdownOverlay').style.opacity = '1';
+
+            if (audioCtx && audioCtx.state === 'suspended') {
+                try { await audioCtx.resume(); } catch(_) {}
+            }
+            startCaptureCountdown();
+        });
+
+        // "Back To Pet Mode" Blurry Action Button (Placeholder routing for backend team)
+        document.getElementById('backToPetBtn').addEventListener('click', () => {
+            console.log("Routing Triggered: Returning to Desktop Pet Mode (启动页)...");
+            // 💡 提示：此处跳转逻辑已写死，后续交给后端同学直接配置 window.location.href 或路由中心即可
+        });
+
+        // Skip Calibration
+        document.getElementById('skipCalibrationBtn').addEventListener('click', () => {
+            if (!isCalibrated) {
+                calibrationOffsets = { x: 0.5, y: 0.5, dist: 0.25 };
+                isCalibrated = true;
+                document.getElementById('skipCalibrationBtn').style.opacity = '0.3';
+                document.getElementById('skipCalibrationBtn').disabled = true;
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', runHardwareCameraPipeline);
+    </script>
+</body>
+</html>

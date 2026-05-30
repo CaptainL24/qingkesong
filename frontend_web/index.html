@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worker Companion - Premium Pre-launch</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Premium Editorial Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@700&family=Plus+Jakarta+Sans:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #ffffff;
+            overflow: hidden;
+        }
+        .display-font {
+            font-family: 'Antonio', sans-serif;
+            text-transform: uppercase;
+        }
+        /* Hide scrollbars while maintaining core native behavior */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Full Replica Curtain Loader */
+        #luxury-loader {
+            position: fixed;
+            inset: 0;
+            background-color: #111111; /* Stark black for intense opening contrast */
+            color: #ffffff;
+            z-index: 999;
+            display: flex;
+            flex-col: justify-between;
+            transition: transform 1.2s cubic-bezier(0.85, 0, 0.15, 1);
+        }
+        /* Progress line expanding elegantly */
+        .loader-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background-color: #ff007f; /* Accent Hot Pink */
+            width: 0%;
+            transition: width 0.08s linear;
+        }
+
+        /* Drag Follow Cursor */
+        .custom-cursor {
+            position: fixed;
+            pointer-events: none;
+            transform: translate(-50%, -50%) scale(0);
+            z-index: 100;
+            background-color: #ff007f;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            box-shadow: 0 10px 25px rgba(255, 0, 127, 0.25);
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            text-transform: uppercase;
+        }
+        .carousel-zone:hover ~ .custom-cursor {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* Stereoscopic 3D Stage Container & Parallax Cards */
+        .stage-perspective {
+            perspective: none;
+        }
+        .stereoscopic-card {
+            transform-style: flat;
+            transition: opacity 0.45s ease;
+            opacity: 0;
+            pointer-events: none;
+            transform: none;
+        }
+        .stereoscopic-card.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: none;
+        }
+        .stage-icon {
+            -webkit-user-drag: none;
+            user-select: none;
+        }
+        /* Pure CSS Game Character Idle Animation Loop */
+        .idle-float {
+            animation: characterFloat 4s ease-in-out infinite alternate;
+        }
+        @keyframes characterFloat {
+            0% { transform: translateY(0px) rotateX(1deg) rotateY(-1deg); }
+            100% { transform: translateY(-12px) rotateX(-2deg) rotateY(2deg); }
+        }
+
+        /* Bottom Drag Item Grid/Track Style */
+        .menu-item {
+            color: rgba(17, 17, 17, 0.15);
+            transition: color 0.4s cubic-bezier(0.25, 1, 0.5, 1), transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .menu-item.active-item {
+            color: #ff007f;
+            transform: scale(1.05);
+        }
+        #carousel-inner-track {
+            display: inline-flex;
+            width: max-content;
+            min-width: 100%;
+            box-sizing: content-box;
+            gap: clamp(6rem, 9vw, 9rem);
+            padding-left: var(--carousel-start-pad, 50vw);
+            padding-right: var(--carousel-end-pad, 50vw);
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen select-none m-0 p-0 overflow-hidden text-neutral-900">
+
+    <!-- 1. FULL REPLICA TYPOGRAPHIC CURTAIN LOADER -->
+    <div id="luxury-loader" class="flex flex-col justify-between p-8 md:p-16">
+        <!-- Top branding layout inside loader -->
+        <div class="flex justify-between items-start w-full">
+            <div class="font-mono text-[10px] tracking-widest opacity-40 uppercase">System: Initializing Workstation</div>
+            <div class="font-mono text-[10px] tracking-widest opacity-40 uppercase text-right">Ver: 2026.05.31</div>
+        </div>
+
+        <!-- Giant Centered Counter Block mimicking Field Day Sound luxury weight -->
+        <div class="my-auto flex flex-col">
+            <span class="display-font text-[18vw] font-bold leading-none tracking-tighter" id="loader-big-num">000</span>
+            <div class="h-1 overflow-hidden bg-white/10 w-48 relative mt-4">
+                <div id="loader-mini-progress" class="absolute top-0 left-0 bottom-0 bg-[#ff007f] w-0"></div>
+            </div>
+            <span class="font-mono text-xs tracking-wider opacity-60 mt-4" id="loader-status">CONNECTING PROTOCOLS...</span>
+        </div>
+
+        <!-- Bottom Layout Metadata -->
+        <div class="flex justify-between items-end w-full border-t border-white/10 pt-6">
+            <div class="max-w-xs text-xs opacity-50 leading-relaxed font-light">
+                Premium Companion Selection Interface. Designed for elite internet professionals matching optimal office desktop entities.
+            </div>
+            <div class="display-font text-xl font-bold tracking-widest text-[#ff007f]">
+                LAB ©
+            </div>
+        </div>
+        <div class="loader-bar" id="loader-main-bar"></div>
+    </div>
+
+
+    <!-- 2. MAIN USER INTERFACE (FADES IN SMOOTHLY) -->
+    <!-- Fixed Top Left Layout Heading -->
+    <header class="absolute top-0 left-0 p-8 md:p-12 z-50 max-w-xl pointer-events-none">
+        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight leading-[0.95] text-neutral-900">
+            请选择你的<br><span class="text-neutral-300 font-normal italic font-serif text-3xl md:text-5xl ml-1">工位</span>
+        </h1>
+        <p class="text-[10px] tracking-[0.25em] uppercase text-neutral-400 mt-4 font-mono font-bold">CHOOSE YOUR WORKSTATION COMPANION</p>
+    </header>
+
+    <!-- Center Stage: 3D Stereoscopic Pure White Cards (1/3 Viewport) -->
+    <main class="absolute inset-0 flex justify-center items-center z-10 stage-perspective pointer-events-auto">
+        <div id="3d-stage-box" class="w-[85vw] h-[48vh] sm:w-[32vw] sm:h-[52vh] relative flex justify-center items-center cursor-grab active:cursor-grabbing">
+            
+            <!-- THE WEEKND CARD -->
+            <div class="stereoscopic-card active absolute inset-0 bg-white p-0 flex items-center justify-center" data-role="the-weeknd">
+                <div class="w-full h-full bg-white flex items-center justify-center relative group idle-float">
+                    <img src="assets/the-weeknd.png" draggable="false" class="stage-icon w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="The Weeknd">
+                </div>
+            </div>
+
+            <!-- BEAGLE DUODONG CARD -->
+            <div class="stereoscopic-card absolute inset-0 bg-white p-0 flex items-center justify-center" data-role="beagleduodong">
+                <div class="w-full h-full bg-white flex items-center justify-center relative group idle-float">
+                    <img src="assets/beagleduodong.png" draggable="false" class="stage-icon w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="BeagleDuoDong">
+                </div>
+            </div>
+
+            <!-- JUDY CARD -->
+            <div class="stereoscopic-card absolute inset-0 bg-white p-0 flex items-center justify-center" data-role="judy">
+                <div class="w-full h-full bg-white flex items-center justify-center relative group idle-float">
+                    <img src="assets/judy.png" draggable="false" class="stage-icon w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Judy">
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- 3. HORIZONTAL DRAGGABLE MARQUEE TRACK (REPLICA INTERACTIVE DYNAMICS) -->
+    <div id="carousel-outer" class="carousel-zone absolute bottom-0 left-0 w-full overflow-x-scroll no-scrollbar z-30 py-16 cursor-grab active:cursor-grabbing">
+        <div id="carousel-inner-track" class="flex whitespace-nowrap items-end select-none">
+            
+            <div class="menu-item active-item display-font text-[9vw] sm:text-[7vw] font-bold leading-[0.8] tracking-tighter cursor-none" data-brand="the-weeknd">The Weeknd</div>
+            <div class="menu-item display-font text-[9vw] sm:text-[7vw] font-bold leading-[0.8] tracking-tighter cursor-none" data-brand="beagleduodong">BeagleDuoDong</div>
+            <div class="menu-item display-font text-[9vw] sm:text-[7vw] font-bold leading-[0.8] tracking-tighter cursor-none" data-brand="judy">Judy</div>
+
+        </div>
+    </div>
+
+    <!-- Floating DRAG badge follow element -->
+    <div id="custom-cursor" class="custom-cursor">DRAG</div>
+
+    <!-- Full Functional Dynamic Logic Script -->
+    <script>
+        const loader = document.getElementById('luxury-loader');
+        const loaderBigNum = document.getElementById('loader-big-num');
+        const loaderMiniBar = document.getElementById('loader-mini-progress');
+        const loaderMainBar = document.getElementById('loader-main-bar');
+        const loaderStatus = document.getElementById('loader-status');
+
+        const slider = document.getElementById('carousel-outer');
+        const cursor = document.getElementById('custom-cursor');
+        const carouselTrack = document.getElementById('carousel-inner-track');
+        const menuItems = document.querySelectorAll('.menu-item');
+        const cards = document.querySelectorAll('.stereoscopic-card');
+        const stageBox = document.getElementById('3d-stage-box');
+
+        let isDown = false;
+        let startX, scrollLeft, isDragging = false;
+        let stageDragStartX = 0;
+        let stageDragStartY = 0;
+        let stagePointerDown = false;
+        let currentRole = 'the-weeknd';
+        let focusScrollTimer = null;
+
+        // --- Premium Web Audio Synthesizer Matrix ---
+        let audioCtx = null;
+        function soundSynthesizer(freq, waveform, duration, volume = 0.06) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.type = waveform;
+                oscillator.frequency.value = freq;
+                
+                gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + duration);
+            } catch(e) { console.warn('Audio contextual block triggered.'); }
+        }
+
+        const playTick = () => soundSynthesizer(950, 'sine', 0.08, 0.04);
+        const playSlideReveal = () => {
+            soundSynthesizer(440, 'triangle', 0.5, 0.08);
+            setTimeout(() => soundSynthesizer(880, 'sine', 0.3, 0.05), 100);
+        };
+
+        // --- High-Fidelity Professional Loading Sequence ---
+        let currentProgress = 0;
+        const loadingPhrases = [
+            "CONNECTING CENTRAL NETWORK...",
+            "ALLOCATING 3D COMPANION NODES...",
+            "SYNCHRONIZING DESKTOP BEHAVIOR METRICS...",
+            "STABILIZING IMMERSIVE COGNITIVE WORKSTATIONS...",
+            "PROVISIONING COMPANION COFFEE INTERFACES...",
+            "SYSTEM READY TO DEPLOY."
+        ];
+
+        const loadingTimer = setInterval(() => {
+            // High-fidelity progressive step simulation
+            currentProgress += Math.floor(Math.random() * 8) + 1;
+            
+            if (currentProgress >= 100) {
+                currentProgress = 100;
+                clearInterval(loadingTimer);
+                loaderStatus.innerText = loadingPhrases[loadingPhrases.length - 1];
+                
+                // Final full completion split curtain animation sequence
+                setTimeout(() => {
+                    playSlideReveal();
+                    loader.style.transform = 'translateY(-100%)'; // Elegant curtain slide up
+                    setTimeout(() => loader.style.display = 'none', 1200);
+                }, 500);
+            } else {
+                // Update text indicators dynamically based on bracket weights
+                const phraseIdx = Math.floor((currentProgress / 100) * (loadingPhrases.length - 1));
+                loaderStatus.innerText = loadingPhrases[phraseIdx];
+            }
+
+            // Pad numbers perfectly to keep high-end monospace grid spacing intact
+            loaderBigNum.innerText = currentProgress.toString().padStart(3, '0');
+            loaderMiniBar.style.width = currentProgress + '%';
+            loaderMainBar.style.width = currentProgress + '%';
+        }, 50);
+
+        // --- State/Character Management ---
+        function activateRole(roleId) {
+            if (currentRole === roleId) return;
+            currentRole = roleId;
+
+            playTick();
+
+            // Update bottom horizontal typography colors
+            menuItems.forEach(item => {
+                if (item.getAttribute('data-brand') === roleId) {
+                    item.classList.add('active-item');
+                } else {
+                    item.classList.remove('active-item');
+                }
+            });
+
+            // Trigger crossfade and rotation translations for pure white cards
+            cards.forEach(card => {
+                if (card.getAttribute('data-role') === roleId) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+        }
+
+        function centerMenuItem(roleId) {
+            const item = Array.from(menuItems).find(menu => menu.getAttribute('data-brand') === roleId);
+            if (!item) return;
+
+            const boundary = item.getBoundingClientRect();
+            const targetOffset = boundary.left + slider.scrollLeft - (window.innerWidth / 2) + (boundary.width / 2);
+            slider.scrollTo({ left: targetOffset, behavior: 'smooth' });
+        }
+
+        function syncCarouselEdgePadding() {
+            const firstItem = menuItems[0];
+            const lastItem = menuItems[menuItems.length - 1];
+            if (!firstItem || !lastItem) return;
+
+            const startPad = Math.max(0, (window.innerWidth - firstItem.offsetWidth) / 2);
+            const endPad = Math.max(0, (window.innerWidth - lastItem.offsetWidth) / 2);
+            carouselTrack.style.setProperty('--carousel-start-pad', `${startPad}px`);
+            carouselTrack.style.setProperty('--carousel-end-pad', `${endPad}px`);
+        }
+
+        function switchByStep(step) {
+            const roles = Array.from(menuItems).map(item => item.getAttribute('data-brand'));
+            const currentIndex = roles.indexOf(currentRole);
+            const nextIndex = Math.max(0, Math.min(roles.length - 1, currentIndex + step));
+            const nextRole = roles[nextIndex];
+
+            if (nextRole && nextRole !== currentRole) {
+                activateRole(nextRole);
+                centerMenuItem(nextRole);
+            }
+        }
+
+        // --- Viewport Focal Center Intersector ---
+        function evaluateCenterFocus() {
+            const focalLine = window.innerWidth / 2;
+            let targetSelection = null;
+            let proximityLimit = Infinity;
+
+            menuItems.forEach(item => {
+                const boundary = item.getBoundingClientRect();
+                const itemCenter = boundary.left + boundary.width / 2;
+                const distance = Math.abs(focalLine - itemCenter);
+
+                if (distance < proximityLimit) {
+                    proximityLimit = distance;
+                    targetSelection = item;
+                }
+            });
+
+            if (targetSelection) {
+                const targetRole = targetSelection.getAttribute('data-brand');
+                activateRole(targetRole);
+            }
+        }
+
+        function scheduleCenterAfterScroll() {
+            clearTimeout(focusScrollTimer);
+            focusScrollTimer = setTimeout(() => centerMenuItem(currentRole), 120);
+        }
+
+        // --- Interactive Mouse Parallax 3D Effect for Active Card ---
+        window.addEventListener('mousemove', (e) => {
+            // Track custom badge placement coordinates over tracking window
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+
+            stageBox.style.transform = 'none';
+        });
+
+        // --- Image Stage Swipe Layer ---
+        stageBox.addEventListener('mousedown', (e) => {
+            stagePointerDown = true;
+            stageDragStartX = e.clientX;
+            stageDragStartY = e.clientY;
+            stageBox.classList.replace('cursor-grab', 'cursor-grabbing');
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (!stagePointerDown) return;
+            stagePointerDown = false;
+            stageBox.classList.replace('cursor-grabbing', 'cursor-grab');
+
+            const dx = e.clientX - stageDragStartX;
+            const dy = e.clientY - stageDragStartY;
+            if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+                switchByStep(dx < 0 ? 1 : -1);
+            }
+        });
+
+        stageBox.addEventListener('touchstart', (e) => {
+            stagePointerDown = true;
+            stageDragStartX = e.touches[0].clientX;
+            stageDragStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        stageBox.addEventListener('touchend', (e) => {
+            if (!stagePointerDown || !e.changedTouches.length) return;
+            stagePointerDown = false;
+
+            const dx = e.changedTouches[0].clientX - stageDragStartX;
+            const dy = e.changedTouches[0].clientY - stageDragStartY;
+            if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+                switchByStep(dx < 0 ? 1 : -1);
+            }
+        }, { passive: true });
+
+        // --- Drag Dynamics Physics Matrix ---
+        slider.addEventListener('mousedown', (e) => {
+            isDown = true;
+            isDragging = false;
+            slider.classList.replace('cursor-grab', 'cursor-grabbing');
+            startX = e.pageX - slider.offsetLeft;
+            scrollLeft = slider.scrollLeft;
+        });
+
+        slider.addEventListener('mouseleave', () => {
+            isDown = false;
+            slider.classList.replace('cursor-grabbing', 'cursor-grab');
+        });
+
+        slider.addEventListener('mouseup', () => {
+            isDown = false;
+            slider.classList.replace('cursor-grabbing', 'cursor-grab');
+            scheduleCenterAfterScroll();
+        });
+
+        slider.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const currentX = e.pageX - slider.offsetLeft;
+            const relativeWalk = (currentX - startX) * 2.2; // Optimized acceleration multiplier
+            if (Math.abs(relativeWalk) > 5) isDragging = true;
+            slider.scrollLeft = scrollLeft - relativeWalk;
+        });
+
+        // --- Mobile Swipe Optimization Layer ---
+        slider.addEventListener('touchstart', (e) => {
+            isDown = true;
+            isDragging = false;
+            startX = e.touches[0].pageX - slider.offsetLeft;
+            scrollLeft = slider.scrollLeft;
+        });
+
+        slider.addEventListener('touchend', () => {
+            isDown = false;
+            scheduleCenterAfterScroll();
+        });
+        slider.addEventListener('touchmove', (e) => {
+            if (!isDown) return;
+            const currentTouchX = e.touches[0].pageX - slider.offsetLeft;
+            const relativeTouchWalk = (currentTouchX - startX) * 1.8;
+            isDragging = true;
+            slider.scrollLeft = scrollLeft - relativeTouchWalk;
+        });
+
+        slider.addEventListener('scroll', evaluateCenterFocus);
+        window.addEventListener('resize', () => {
+            syncCarouselEdgePadding();
+            centerMenuItem(currentRole);
+        });
+
+        // Click-to-Center automated tween rules
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                if (!isDragging) {
+                    const role = item.getAttribute('data-brand');
+                    activateRole(role);
+                    centerMenuItem(role);
+                }
+            });
+        });
+
+        // Execution kickoff sequence mapping
+        syncCarouselEdgePadding();
+        setTimeout(() => {
+            syncCarouselEdgePadding();
+            centerMenuItem(currentRole);
+            evaluateCenterFocus();
+        }, 600);
+    </script>
+</body>
+</html>
