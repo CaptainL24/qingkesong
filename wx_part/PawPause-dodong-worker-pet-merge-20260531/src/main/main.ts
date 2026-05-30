@@ -4467,7 +4467,7 @@ function registerIpc(): void {
   ipcMain.on("break:end-screen-block", finishBreakRun);
   ipcMain.on("pet:clicked", () => {
     if (blockingMode || getSettings().lyricsModeEnabled) return;
-    createExerciseWindow();
+    randomPetClickReaction();
   });
   ipcMain.on("pet:context-menu", showPetContextMenu);
   ipcMain.on("pet:drag-start", (_event, offset: { offsetX: number; offsetY: number }) =>

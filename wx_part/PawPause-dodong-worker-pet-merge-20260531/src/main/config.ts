@@ -29,12 +29,12 @@ export const EXERCISE_WINDOW = {
 
 export const PRELOAD_PATH = join(__dirname, "../preload/index.cjs");
 export const RENDERER_HTML_PATH = join(__dirname, "../renderer/index.html");
-export const EXERCISE_GAME_HTML_PATH = join(__dirname, "../renderer/game1.html");
+export const EXERCISE_GAME_HTML_PATH = join(__dirname, "../renderer/game1_v2.html");
 export const IS_DEV = Boolean(process.env.ELECTRON_RENDERER_URL);
 
 export function exerciseGameUrl(): string {
   const devServer = process.env.ELECTRON_RENDERER_URL;
-  if (devServer) return `${devServer}/game1.html`;
+  if (devServer) return `${devServer}/game1_v2.html`;
   return EXERCISE_GAME_HTML_PATH;
 }
 

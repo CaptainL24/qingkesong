@@ -463,10 +463,17 @@
             }, 1000);
         }
 
+        function ensureAnimationLoop() {
+            clearInterval(animationTimer);
+            animationTimer = setInterval(() => {
+                if (!finished) drawOpticalStickman(beatIndex);
+                updateDiagnosticHUD();
+            }, 60);
+        }
+
         function terminateSessionWorkspace() {
             finished = true;
             clearInterval(metronomeTimer);
-            clearInterval(animationTimer);
             executeSuccessChime();
 
             document.getElementById('resScore').textContent = score.toString().padStart(3, '0');
@@ -482,6 +489,7 @@
 
             const resultsPane = document.getElementById('resultPanel');
             resultsPane.classList.remove('translate-y-full', 'opacity-0');
+            window.pawpause?.exerciseComplete?.(score);
         }
 
         // --- 6. EVENT BINDING & HARDWARE CAMERA PIPELINE ---
@@ -503,10 +511,7 @@
                 });
                 mediaPipeCameraInstance.start();
 
-                animationTimer = setInterval(() => {
-                    if (!finished) drawOpticalStickman(beatIndex);
-                    updateDiagnosticHUD();
-                }, 60);
+                ensureAnimationLoop();
 
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 setTimeout(startCaptureCountdown, 800);
@@ -522,8 +527,7 @@
             document.getElementById('resultPanel').classList.add('translate-y-full', 'opacity-0');
             clearInterval(countdownTimer);
             clearInterval(metronomeTimer);
-            clearInterval(animationTimer);
-            
+
             score = 0; combo = 0; maxCombo = 0; perfectCount = 0; goodCount = 0; missCount = 0;
             beatIndex = 0; countdownValue = null; finished = false; started = false;
             latestLandmarks = lastValidLandmarks || latestLandmarks;
@@ -535,13 +539,16 @@
             if (audioCtx && audioCtx.state === 'suspended') {
                 try { await audioCtx.resume(); } catch(_) {}
             }
+            ensureAnimationLoop();
             startCaptureCountdown();
         });
 
-        // "Back To Pet Mode" Blurry Action Button (Placeholder routing for backend team)
         document.getElementById('backToPetBtn').addEventListener('click', () => {
-            console.log("Routing Triggered: Returning to Desktop Pet Mode (启动页)...");
-            // 💡 提示：此处跳转逻辑已写死，后续交给后端同学直接配置 window.location.href 或路由中心即可
+            if (window.pawpause?.closeExercise) {
+                window.pawpause.closeExercise();
+            } else {
+                window.close();
+            }
         });
 
         // Skip Calibration
