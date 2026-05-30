@@ -2,13 +2,15 @@
 
 browser_photo_backup.py大概是一个比较全的流程，其它的代码主要是把这个脚本拆开了方便测试
 
-browser_photo.py可以实现浏览器调起（但没有实现桌宠的动画/交互）&拍照&检测
+browser_photo.py可以实现浏览器调起、拍照、AI 检测，并通过 `health_bridge.py` 把事件写入桌宠 JSONL
 
 camera_ai.py可以实现接ai判断“班味重不重”
 
-ui_flow.py是后续调起recommendation.py（进入小游戏界面）
+health_bridge.py负责把事件追加到 `~/.local/share/pawpause/health-events.jsonl`，供 wx_part 桌宠消费
 
-test_ui_flow.py是为了测试方便单独
+ui_flow.py是旧的 Tkinter 弹窗 + recommendation.py 流程（browser_photo 已改走 JSONL）
+
+test_ui_flow.py手动写入一条 `neck_guide` 事件，方便不测摄像头时验证桌宠对接
 
 *网页*
 
@@ -22,7 +24,13 @@ test_ui_flow.py是为了测试方便单独
 python browser_photo.py
 ```
 
-### 2.跳过前面测试流程直接调用网页测试：测试弹窗好不好用/修改弹窗的前端
+### 2.跳过摄像头，直接测试 JSONL → 桌宠对接（需 wx_part 桌宠已在跑）
 ```bash
 python test_ui_flow.py
+```
+
+### 3.环境变量（可选）
+```bash
+# 与 wx_part 共用，覆盖 JSONL 路径
+export PAWPAUSE_HEALTH_EVENTS=/absolute/path/to/health-events.jsonl
 ```

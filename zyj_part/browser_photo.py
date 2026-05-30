@@ -6,7 +6,7 @@ import threading
 import webbrowser
 
 import camera_ai
-from ui_flow import show_message
+import health_bridge
 
 app = Flask(__name__)
 
@@ -35,9 +35,10 @@ def upload():
     except (ValueError, UnidentifiedImageError, IndexError, base64.binascii.Error) as e:
         return jsonify({"ok": False, "error": f"invalid image: {e}"}), 400
 
+    health_bridge.emit_analyzing()
     analysis = camera_ai.check_image(image)
-    show_message(analysis)
-    return jsonify({"ok": True})
+    event = health_bridge.notify_analysis_result(analysis)
+    return jsonify({"ok": True, "analysis": analysis, "event": event})
 
 
 @app.route("/")
