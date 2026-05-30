@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>打工人伴侣 · 入口页</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg1: #f7f9ff;
+        --bg2: #eef4ff;
+        --card: rgba(255, 255, 255, 0.82);
+        --text: #1f2937;
+        --muted: #6b7280;
+        --primary: #4f7cff;
+        --primary-dark: #345ee8;
+        --border: rgba(79, 124, 255, 0.14);
+        --shadow: 0 20px 50px rgba(79, 124, 255, 0.14);
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--text); background: radial-gradient(circle at top left, #ffffff 0%, transparent 35%), linear-gradient(135deg, var(--bg1), var(--bg2)); }
+      body { display: grid; place-items: center; padding: 24px; }
+      .card { width: min(900px, 100%); background: var(--card); border: 1px solid var(--border); border-radius: 28px; box-shadow: var(--shadow); backdrop-filter: blur(12px); padding: 32px; display: flex; flex-direction: column; gap: 24px; }
+      .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+      .title { font-size: 28px; font-weight: 800; letter-spacing: 0.02em; }
+      .badge { padding: 8px 14px; border-radius: 999px; background: rgba(79, 124, 255, 0.1); color: var(--primary-dark); font-size: 14px; font-weight: 700; }
+      .hero { min-height: 300px; display: grid; place-items: center; border: 1px dashed rgba(79, 124, 255, 0.2); border-radius: 24px; background: rgba(255, 255, 255, 0.55); text-align: center; padding: 32px; }
+      .hero h1 { margin: 0 0 12px; font-size: clamp(28px, 4vw, 48px); }
+      .hero p { margin: 0; font-size: 16px; line-height: 1.8; color: var(--muted); max-width: 42em; }
+      .links { display: flex; gap: 12px; flex-wrap: wrap; }
+      a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; border-radius: 14px; padding: 12px 18px; font-weight: 700; }
+      .primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 10px 24px rgba(79, 124, 255, 0.25); }
+      .ghost { background: rgba(79, 124, 255, 0.08); color: var(--primary-dark); }
+      .footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+      .hint { color: var(--muted); font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="header">
+        <div class="title">打工人伴侣 · 游戏入口</div>
+        <div class="badge">test.html</div>
+      </div>
+
+      <section class="hero">
+        <div>
+          <h1>请选择一个小游戏</h1>
+          <p>
+            `game1` 是基于摄像头动作识别的八拍颈椎运动小游戏，`game2` 目前还是占位页，后续会继续接入 AI 班味识别等功能。
+          </p>
+          <div class="links" style="margin-top: 24px; justify-content: center;">
+            <a class="btn primary" href="/game1">进入 game1</a>
+            <a class="btn ghost" href="/game2">进入 game2</a>
+          </div>
+        </div>
+      </section>
+
+      <div class="footer">
+        <div class="hint">提示：进入 `game1` 后请允许摄像头权限。</div>
+        <div class="hint">后续可以把这里扩展成更多工作场景小游戏。</div>
+      </div>
+    </main>
+  </body>
+</html>
