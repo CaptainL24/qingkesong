@@ -1,7 +1,6 @@
 import type { JSX } from "react";
 import { i18n, resolveLanguage } from "../../shared/i18n";
 import { PetView } from "./components/PetView";
-import { ExerciseView } from "./components/ExerciseView";
 import { SettingsView } from "./components/SettingsView";
 import { pawpauseApi } from "./pawpauseApi";
 
@@ -23,7 +22,6 @@ function PreloadUnavailable(): JSX.Element {
 export default function App(): JSX.Element {
   if (!window.pawpause && window.pawpal) window.pawpause = window.pawpal;
   const route = window.location.hash.replace("#", "");
-  if (route === "exercise") return <ExerciseView />;
   if (!pawpauseApi()) return <PreloadUnavailable />;
   if (route === "settings") return <SettingsView />;
   return <PetView />;

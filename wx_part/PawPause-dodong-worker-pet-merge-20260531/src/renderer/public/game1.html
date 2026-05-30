@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>game1 · 八拍颈椎运动</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --panel: rgba(15, 23, 42, 0.7);
+        --panel-border: rgba(148, 163, 184, 0.18);
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --good: #22c55e;
+        --perfect: #60a5fa;
+        --miss: #f87171;
+        --gold: #fbbf24;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: radial-gradient(circle at top, #1e293b 0%, var(--bg) 65%); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+      #app { position: relative; width: 100%; height: 100%; }
+      video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+      video { object-fit: cover; transform: scaleX(-1); filter: saturate(1.05) contrast(1.02); }
+      canvas { pointer-events: none; }
+      .topbar {
+        position: absolute; left: 16px; top: 16px; right: 16px; z-index: 10;
+        display: flex; justify-content: space-between; gap: 12px; align-items: center;
+        padding: 14px 18px; border-radius: 18px; background: var(--panel); border: 1px solid var(--panel-border); backdrop-filter: blur(12px);
+      }
+      .title { font-size: 18px; font-weight: 800; }
+      .subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+      .badge { padding: 8px 12px; border-radius: 999px; background: rgba(56, 189, 248, 0.14); color: #7dd3fc; font-size: 13px; }
+      .status {
+        position: absolute; left: 16px; bottom: 16px; max-width: min(560px, calc(100% - 360px)); z-index: 9;
+        padding: 14px 16px; border-radius: 18px; border: 1px solid var(--panel-border); background: var(--panel); backdrop-filter: blur(12px);
+      }
+      .status strong { color: #fff; }
+      .status p { margin: 8px 0 0; color: var(--muted); line-height: 1.7; font-size: 14px; }
+      .vars {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        font-size: 12px;
+        color: #cbd5e1;
+      }
+      .var-item {
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(148,163,184,.12);
+      }
+      .var-item b { color: #fff; }
+      .dot { display:inline-block; width:10px; height:10px; border-radius:999px; background: var(--good); margin-right:8px; box-shadow: 0 0 0 6px rgba(34,197,94,.14); }
+      .mini {
+        position: absolute; left: 16px; bottom: 16px; width: 250px; height: 250px; z-index: 8;
+        border-radius: 18px; overflow: hidden; border: 1px solid var(--panel-border); background: rgba(15,23,42,.65);
+        box-shadow: 0 18px 40px rgba(0,0,0,.35);
+      }
+      .mini canvas { inset: 0; }
+      .countdown {
+        position: absolute; right: 16px; bottom: 16px; z-index: 9;
+        padding: 12px 16px; border-radius: 16px; background: var(--panel); border: 1px solid var(--panel-border); backdrop-filter: blur(12px);
+        min-width: 190px; text-align: right;
+      }
+      .countdown .big { font-size: 30px; font-weight: 900; color: var(--gold); }
+      .countdown .small { color: var(--muted); font-size: 13px; margin-top: 4px; }
+      .result {
+        position: absolute; inset: 0; display: none; place-items: center; z-index: 20;
+        background: rgba(2, 6, 23, 0.66); backdrop-filter: blur(8px); padding: 20px;
+      }
+      .result.show { display: grid; }
+      .result-card {
+        width: min(720px, 100%); border-radius: 28px; padding: 28px; background: rgba(15, 23, 42, 0.92);
+        border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 30px 80px rgba(0,0,0,.45);
+      }
+      .result-card h2 { margin: 0 0 10px; font-size: 34px; }
+      .result-card p { margin: 10px 0; line-height: 1.8; color: var(--muted); }
+      .stats { display: flex; gap: 12px; flex-wrap: wrap; margin: 18px 0; }
+      .stat { flex: 1 1 160px; padding: 14px; border-radius: 18px; background: rgba(255,255,255,.04); }
+      .stat .label { color: var(--muted); font-size: 13px; }
+      .stat .value { margin-top: 6px; font-size: 26px; font-weight: 900; }
+      .actions { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; }
+      button { border: 0; border-radius: 14px; padding: 12px 18px; font-weight: 800; cursor: pointer; }
+      .primary { background: linear-gradient(135deg, #38bdf8, #2563eb); color: white; }
+      .ghost { background: rgba(255,255,255,.08); color: var(--text); }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="overlay"></canvas>
+
+      <div class="topbar">
+        <div>
+          <div class="title">game1 · 八拍颈椎运动</div>
+          <div class="subtitle">左下角火柴人会带着你做 8 拍动作：上、下、左、右循环。允许轻微延迟。</div>
+        </div>
+        <div class="badge" id="badge">等待启动摄像头</div>
+      </div>
+
+      <div class="mini">
+        <canvas id="stickman"></canvas>
+      </div>
+
+      <div class="status">
+        <div><span class="dot"></span><strong id="poseLabel">准备开始</strong></div>
+        <p id="poseDesc">请允许摄像头权限。我们会识别你的头颈姿态，并在 8 个八拍后给出评分。</p>
+        <div class="vars">
+          <div class="var-item">角度：<b id="varAngle">--</b></div>
+          <div class="var-item">鼻-眼X：<b id="varNoseX">--</b></div>
+          <div class="var-item">鼻-眼Y：<b id="varNoseY">--</b></div>
+          <div class="var-item">窗口最佳：<b id="varBest">--</b></div>
+        </div>
+      </div>
+
+      <div class="countdown">
+        <div class="big" id="beatText">8 / 8</div>
+        <div class="small" id="beatDesc">等待开始</div>
+      </div>
+
+      <div class="result" id="resultPanel">
+        <div class="result-card">
+          <h2 id="resultTitle">完成啦！</h2>
+          <p id="resultSummary"></p>
+          <div class="stats">
+            <div class="stat"><div class="label">Perfect</div><div class="value" id="perfectCount">0</div></div>
+            <div class="stat"><div class="label">Good</div><div class="value" id="goodCount">0</div></div>
+            <div class="stat"><div class="label">Miss</div><div class="value" id="missCount">0</div></div>
+          </div>
+          <div class="actions">
+            <button class="ghost" id="replayBtn">再来一轮</button>
+            <button class="primary" id="closeBtn">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <script>
+      const video = document.getElementById('video');
+      const overlay = document.getElementById('overlay');
+      const stickman = document.getElementById('stickman');
+      const badge = document.getElementById('badge');
+      const poseLabel = document.getElementById('poseLabel');
+      const poseDesc = document.getElementById('poseDesc');
+      const beatText = document.getElementById('beatText');
+      const beatDesc = document.getElementById('beatDesc');
+      const varAngle = document.getElementById('varAngle');
+      const varNoseX = document.getElementById('varNoseX');
+      const varNoseY = document.getElementById('varNoseY');
+      const varBest = document.getElementById('varBest');
+      const resultPanel = document.getElementById('resultPanel');
+      const resultTitle = document.getElementById('resultTitle');
+      const resultSummary = document.getElementById('resultSummary');
+      const perfectCountEl = document.getElementById('perfectCount');
+      const goodCountEl = document.getElementById('goodCount');
+      const missCountEl = document.getElementById('missCount');
+      const replayBtn = document.getElementById('replayBtn');
+      const ctx = overlay.getContext('2d');
+      const sctx = stickman.getContext('2d');
+
+      const BPM_MS = 750;
+      const TOTAL_BEATS = 8;
+      const EXPECTED = ['up','up','down','down','left','left','right','right'];
+      const stateHistory = [];
+      const beatScores = [];
+      let latestLandmarks = null;
+      let lastValidLandmarks = null;
+      let beatIndex = 0;
+      let started = false;
+      let finished = false;
+      let beatTimer = null;
+      let animationTimer = null;
+      let countdownTimer = null;
+      let countdownValue = null;
+      let audioCtx = null;
+      let metronomeOsc = null;
+      let metronomeGain = null;
+      let metronomeTimer = null;
+      let tickStart = 0;
+      let currentInstruction = 'up';
+
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        overlay.width = overlay.clientWidth * dpr;
+        overlay.height = overlay.clientHeight * dpr;
+        stickman.width = stickman.clientWidth * dpr;
+        stickman.height = stickman.clientHeight * dpr;
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      function mirrorPoint(p) { return p ? { ...p, x: 1 - p.x } : p; }
+      function mirrorLandmarks(landmarks) { return landmarks.map(mirrorPoint); }
+
+      function drawSkeleton(context, landmarks, width, height, color = '#60a5fa', alpha = 1) {
+        const pts = mirrorLandmarks(landmarks);
+        const pairs = [
+          [11, 13], [13, 15], [12, 14], [14, 16],
+          [11, 12], [11, 23], [12, 24], [23, 24],
+          [23, 25], [25, 27], [24, 26], [26, 28],
+          [27, 29], [28, 30], [29, 31], [30, 32]
+        ];
+        context.save();
+        context.globalAlpha = alpha;
+        context.clearRect(0, 0, width, height);
+        context.lineWidth = Math.max(2, 3 * (window.devicePixelRatio || 1));
+        context.strokeStyle = color;
+        context.fillStyle = color;
+        for (const [a, b] of pairs) {
+          const p1 = pts[a];
+          const p2 = pts[b];
+          if (!p1 || !p2) continue;
+          context.beginPath();
+          context.moveTo(p1.x * width, p1.y * height);
+          context.lineTo(p2.x * width, p2.y * height);
+          context.stroke();
+        }
+        for (const p of pts) {
+          if (!p) continue;
+          context.beginPath();
+          context.arc(p.x * width, p.y * height, 3.5 * (window.devicePixelRatio || 1), 0, Math.PI * 2);
+          context.fill();
+        }
+        context.restore();
+      }
+
+      function headPoseState(landmarks) {
+        if (!landmarks || landmarks.length < 33) return { state: 'none', confidence: 0, desc: '尚未识别到人体关键点。', debug: {} };
+        const pts = mirrorLandmarks(landmarks);
+
+        const leftEye = pts[2];
+        const rightEye = pts[5];
+        const leftEar = pts[7];
+        const rightEar = pts[8];
+        const nose = pts[0];
+        const mouthLeft = pts[9];
+        const mouthRight = pts[10];
+
+        const eyeMidX = (leftEye.x + rightEye.x) / 2;
+        const eyeMidY = (leftEye.y + rightEye.y) / 2;
+        const mouthMidX = (mouthLeft.x + mouthRight.x) / 2;
+        const mouthMidY = (mouthLeft.y + mouthRight.y) / 2;
+        const earMidX = (leftEar.x + rightEar.x) / 2;
+        const earMidY = (leftEar.y + rightEar.y) / 2;
+
+        const eyeSpan = Math.max(Math.abs(leftEye.x - rightEye.x), 0.0001);
+        const faceHeight = Math.max(Math.abs(mouthMidY - eyeMidY), 0.0001);
+        const earSpan = Math.max(Math.abs(leftEar.x - rightEar.x), 0.0001);
+
+        const eyeLineAngle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x) * 180 / Math.PI;
+        const noseToEyeX = (nose.x - eyeMidX) / eyeSpan;
+        const noseToEyeY = (nose.y - eyeMidY) / faceHeight;
+        const mouthToEyeY = (mouthMidY - eyeMidY) / faceHeight;
+        const noseToEarX = (nose.x - earMidX) / earSpan;
+
+        // 用“打分”代替硬阈值，避免一上来就全 miss
+        const leftScore = Math.max(0, -noseToEyeX) * 2.2 + Math.max(0, eyeLineAngle) * 0.09 + Math.max(0, -noseToEarX) * 1.15;
+        const rightScore = Math.max(0, noseToEyeX) * 2.2 + Math.max(0, -eyeLineAngle) * 0.09 + Math.max(0, noseToEarX) * 1.15;
+        const upScore = Math.max(0, -noseToEyeY) * 2.0 + Math.max(0, 0.42 - mouthToEyeY) * 1.0;
+        const downScore = Math.max(0, noseToEyeY) * 2.0 + Math.max(0, mouthToEyeY - 0.48) * 1.0;
+
+        const scoreMap = { up: upScore, down: downScore, left: leftScore, right: rightScore, center: 0.08 };
+        let state = 'center';
+        let bestScore = 0.08;
+        for (const [k, v] of Object.entries(scoreMap)) {
+          if (v > bestScore) {
+            bestScore = v;
+            state = k;
+          }
+        }
+
+        // 更宽松的置信度映射：分数越高越可信
+        const confidence = Math.max(0.22, Math.min(1, 0.22 + bestScore * 0.35));
+        const debug = {
+          eyeLineAngle,
+          noseToEyeX,
+          noseToEyeY,
+          mouthToEyeY,
+          noseToEarX,
+          leftScore,
+          rightScore,
+          upScore,
+          downScore,
+          eyeSpan,
+          faceHeight,
+          earSpan,
+          eyeMidX,
+          eyeMidY,
+          mouthMidX,
+          mouthMidY,
+          earMidX,
+          earMidY,
+        };
+        const descMap = {
+          up: '基于面部关键点打分，判断为头部上仰。',
+          down: '基于面部关键点打分，判断为头部下压。',
+          left: '基于面部关键点打分，判断为向左转/倾。',
+          right: '基于面部关键点打分，判断为向右转/倾。',
+          center: '面部较居中，等待你的下一拍动作。',
+        };
+        return { state, confidence, desc: descMap[state], debug };
+      }
+
+      function recordSample(state, confidence) {
+        const now = performance.now();
+        stateHistory.push({ t: now, state, confidence });
+        while (stateHistory.length && now - stateHistory[0].t > 2000) stateHistory.shift();
+      }
+
+      function bestStateWithin(windowMs = 1100) {
+        const now = performance.now();
+        const from = now - windowMs;
+        const counts = { up: 0, down: 0, left: 0, right: 0, center: 0 };
+        for (const s of stateHistory) {
+          if (s.t >= from) counts[s.state] = (counts[s.state] || 0) + (0.5 + s.confidence);
+        }
+        let best = 'center';
+        let bestScore = -1;
+        for (const [k, v] of Object.entries(counts)) {
+          if (v > bestScore) { best = k; bestScore = v; }
+        }
+        return { state: best, score: bestScore };
+      }
+
+      function judgeBeat(expected, beatStart) {
+        const windowStart = beatStart - 300;
+        const windowEnd = beatStart + 500;
+        const candidates = stateHistory.filter((s) => s.t >= windowStart && s.t <= windowEnd);
+        if (!candidates.length) return { result: 'miss', predicted: 'none', confidence: 0 };
+
+        const scores = { up: 0, down: 0, left: 0, right: 0, center: 0 };
+        for (const s of candidates) {
+          const weight = 0.35 + s.confidence * 0.65;
+          scores[s.state] = (scores[s.state] || 0) + weight;
+        }
+
+        let predicted = 'center';
+        let bestScore = -1;
+        let runnerUp = -1;
+        for (const [k, v] of Object.entries(scores)) {
+          if (v > bestScore) {
+            runnerUp = bestScore;
+            predicted = k;
+            bestScore = v;
+          } else if (v > runnerUp) {
+            runnerUp = v;
+          }
+        }
+
+        const totalScore = Object.values(scores).reduce((a, b) => a + b, 0) || 1;
+        const confidence = Math.min(1, bestScore / totalScore + 0.12);
+        const margin = bestScore - Math.max(0, runnerUp);
+
+        if (predicted !== expected) {
+          if (margin < 0.25 && candidates.some((s) => s.state === expected)) {
+            return { result: 'good', predicted: expected, confidence: Math.max(0.45, confidence * 0.85) };
+          }
+          return { result: 'miss', predicted, confidence };
+        }
+        if (confidence >= 0.66 || margin >= 0.18) return { result: 'perfect', predicted, confidence };
+        if (confidence >= 0.45) return { result: 'good', predicted, confidence };
+        return { result: 'miss', predicted, confidence };
+      }
+
+      function drawStickman(stepIndex) {
+        const w = stickman.width;
+        const h = stickman.height;
+        sctx.clearRect(0, 0, w, h);
+        const cx = w * 0.5;
+        const cy = h * 0.55;
+        const headR = Math.min(w, h) * 0.08;
+        const torso = h * 0.18;
+        const arm = h * 0.14;
+        const leg = h * 0.17;
+        const phase = stepIndex % 4;
+        const pulse = Math.sin(performance.now() / 180) * 3;
+        let neckX = 0, neckY = 0;
+        let bodyTilt = 0;
+        if (phase === 0) neckY = -14 + pulse;
+        if (phase === 1) neckY = 14 - pulse;
+        if (phase === 2) neckX = -16 + pulse; bodyTilt = -0.2;
+        if (phase === 3) neckX = 16 - pulse; bodyTilt = 0.2;
+
+        const headX = cx + neckX;
+        const headY = cy - torso - headR * 0.8 + neckY;
+        const shoulderY = cy - torso * 0.15;
+        const shoulderX1 = cx - 18;
+        const shoulderX2 = cx + 18;
+        const hipY = cy + torso * 0.65;
+        const legX1 = cx - 12;
+        const legX2 = cx + 12;
+        const armSwing = phase < 2 ? -12 : 12;
+
+        sctx.save();
+        sctx.translate(cx, cy);
+        sctx.rotate(bodyTilt * 0.03);
+        sctx.translate(-cx, -cy);
+        sctx.lineCap = 'round';
+        sctx.lineWidth = 5 * (window.devicePixelRatio || 1);
+        sctx.strokeStyle = '#93c5fd';
+        sctx.fillStyle = '#fde68a';
+        sctx.shadowColor = 'rgba(96,165,250,.3)';
+        sctx.shadowBlur = 12;
+
+        // body
+        sctx.beginPath();
+        sctx.arc(headX, headY, headR, 0, Math.PI * 2);
+        sctx.fill();
+        sctx.strokeStyle = '#a78bfa';
+        sctx.beginPath();
+        sctx.moveTo(cx, cy - torso * 0.15);
+        sctx.lineTo(cx + neckX * 0.15, cy + torso * 0.55);
+        sctx.stroke();
+        sctx.strokeStyle = '#93c5fd';
+
+        // shoulders / arms
+        sctx.beginPath();
+        sctx.moveTo(shoulderX1, shoulderY);
+        sctx.lineTo(shoulderX2, shoulderY);
+        sctx.stroke();
+        sctx.beginPath();
+        sctx.moveTo(shoulderX1, shoulderY);
+        sctx.lineTo(shoulderX1 - arm, shoulderY + 10 + armSwing * 0.1);
+        sctx.stroke();
+        sctx.beginPath();
+        sctx.moveTo(shoulderX2, shoulderY);
+        sctx.lineTo(shoulderX2 + arm, shoulderY + 10 - armSwing * 0.1);
+        sctx.stroke();
+
+        // legs
+        sctx.beginPath();
+        sctx.moveTo(cx, hipY);
+        sctx.lineTo(legX1, hipY + leg);
+        sctx.stroke();
+        sctx.beginPath();
+        sctx.moveTo(cx, hipY);
+        sctx.lineTo(legX2, hipY + leg);
+        sctx.stroke();
+        sctx.restore();
+      }
+
+      function fmt(n) {
+        if (typeof n !== 'number' || Number.isNaN(n)) return '--';
+        return n.toFixed(3);
+      }
+
+      function updateDebug(info) {
+        varAngle.textContent = `${fmt(info.debug?.eyeLineAngle)}°`;
+        varNoseX.textContent = fmt(info.debug?.noseToEyeX);
+        varNoseY.textContent = fmt(info.debug?.noseToEyeY);
+        varBest.textContent = `${info.state} / ${fmt(info.confidence)}`;
+        poseDesc.textContent = `${info.desc} | eyeAngle=${fmt(info.debug?.eyeLineAngle)} noseX=${fmt(info.debug?.noseToEyeX)} noseY=${fmt(info.debug?.noseToEyeY)}`;
+      }
+
+      function updateStatus() {
+        const sourceLandmarks = latestLandmarks || lastValidLandmarks;
+        const info = headPoseState(sourceLandmarks);
+        if (latestLandmarks) lastValidLandmarks = latestLandmarks;
+        updateDebug(info);
+        if (countdownValue !== null) {
+          poseLabel.textContent = `倒计时 ${countdownValue}`;
+          return;
+        }
+        if (started && !finished) {
+          poseLabel.textContent = `识别中 · ${info.state}`;
+        } else if (!started && !finished) {
+          poseLabel.textContent = '准备开始';
+        }
+        if (!finished) {
+          recordSample(info.state, info.confidence);
+        }
+      }
+
+      function finishGame() {
+        finished = true;
+        countdownValue = null;
+        clearInterval(beatTimer);
+        clearInterval(animationTimer);
+        clearInterval(countdownTimer);
+        clearInterval(metronomeTimer);
+        const perfect = beatScores.filter((x) => x === 'perfect').length;
+        const good = beatScores.filter((x) => x === 'good').length;
+        const miss = beatScores.filter((x) => x === 'miss').length;
+        perfectCountEl.textContent = perfect;
+        goodCountEl.textContent = good;
+        missCountEl.textContent = miss;
+        const total = perfect * 3 + good * 1;
+        let praise = '不错哦，你已经成功完成 8 拍颈椎运动。';
+        if (perfect >= 6) praise = '太棒了，你的动作又稳又准，简直是办公室颈椎模范生！';
+        else if (perfect + good >= 6) praise = '做得很好，节奏感已经很在线了，继续保持！';
+        else if (miss <= 2) praise = '整体表现不错，慢慢找到节奏就更好了。';
+        resultTitle.textContent = `完成啦！总分 ${total}`;
+        resultSummary.textContent = `${praise} 这轮统计结果：Perfect ${perfect}，Good ${good}，Miss ${miss}。`; 
+        resultPanel.classList.add('show');
+        badge.textContent = '已结束';
+        beatText.textContent = '8 / 8';
+        beatDesc.textContent = '本轮已完成';
+        window.pawpause?.exerciseComplete?.(total);
+      }
+
+      function playMetronomeBeep() {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 440;
+        gain.gain.value = 0.0001;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const t = audioCtx.currentTime;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.06, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        osc.start(t);
+        osc.stop(t + 0.2);
+      }
+
+      function startMetronome() {
+        if (!audioCtx) return;
+        clearInterval(metronomeTimer);
+        const beatMap = [1,2,3,4,5,6,7,8];
+        let idx = 0;
+        playMetronomeBeep();
+        metronomeTimer = setInterval(() => {
+          if (finished) {
+            clearInterval(metronomeTimer);
+            return;
+          }
+          idx = (idx + 1) % beatMap.length;
+          playMetronomeBeep();
+        }, BPM_MS);
+      }
+
+      function startBeatSequence() {
+        started = true;
+        finished = false;
+        beatIndex = 0;
+        beatScores.length = 0;
+        stateHistory.length = 0;
+        lastValidLandmarks = null;
+        resultPanel.classList.remove('show');
+        badge.textContent = '进行中';
+        beatText.textContent = `8 / 8`;
+        beatDesc.textContent = '跟着左下角火柴人做动作：上、上、下、下、左、左、右、右。';
+        tickStart = performance.now();
+        currentInstruction = EXPECTED[0];
+        updateStatus();
+        startMetronome();
+        let beatStartTime = performance.now();
+        const tick = () => {
+          if (finished) return;
+          if (beatIndex >= TOTAL_BEATS) { finishGame(); return; }
+          currentInstruction = EXPECTED[beatIndex];
+          beatStartTime = performance.now();
+          const remaining = TOTAL_BEATS - beatIndex;
+          beatText.textContent = `${remaining} / 8`;
+          beatDesc.textContent = `第 ${beatIndex + 1} 拍：请做 ${currentInstruction === 'up' ? '上抬' : currentInstruction === 'down' ? '下压' : currentInstruction === 'left' ? '向左' : '向右'} 动作（允许提前 0.3 秒到稍晚 0.5 秒）`;
+          drawStickman(beatIndex);
+          setTimeout(() => {
+            if (finished) return;
+            const judgment = judgeBeat(currentInstruction, beatStartTime);
+            beatScores.push(judgment.result);
+            const map = { perfect: 'Perfect', good: 'Good', miss: 'Miss' };
+            poseLabel.textContent = `${map[judgment.result]} · ${currentInstruction}（${judgment.predicted}）`;
+            poseDesc.textContent = judgment.result === 'miss'
+              ? `这拍没有完全对上，别急，下一拍继续跟上节奏。`
+              : `这拍很不错，继续保持节奏。`;
+          }, 480);
+          beatIndex += 1;
+          setTimeout(tick, BPM_MS);
+        };
+        tick();
+      }
+
+      function startCountdown() {
+        started = false;
+        finished = false;
+        countdownValue = 3;
+        poseLabel.textContent = '准备开始';
+        poseDesc.textContent = '3 秒后开始八拍颈椎运动，请先调整好姿势。';
+        badge.textContent = '倒计时';
+        beatText.textContent = '3';
+        beatDesc.textContent = '即将开始';
+        clearInterval(countdownTimer);
+        updateStatus();
+        countdownTimer = setInterval(() => {
+          if (finished) {
+            clearInterval(countdownTimer);
+            return;
+          }
+          if (countdownValue <= 0) {
+            clearInterval(countdownTimer);
+            countdownValue = null;
+            badge.textContent = '开始';
+            poseLabel.textContent = '开始！';
+            poseDesc.textContent = '现在跟着左下角火柴人一起做动作。';
+            setTimeout(startBeatSequence, 200);
+            return;
+          }
+          beatText.textContent = String(countdownValue);
+          poseLabel.textContent = `倒计时 ${countdownValue}`;
+          poseDesc.textContent = countdownValue === 3 ? '准备好，3 秒后开始。' : countdownValue === 2 ? '调整姿势，马上开始。' : '最后一秒，注意跟拍。';
+          countdownValue -= 1;
+        }, 1000);
+      }
+
+      const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+      pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, smoothSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+      pose.onResults((results) => {
+        latestLandmarks = results.poseLandmarks || null;
+        if (latestLandmarks) lastValidLandmarks = latestLandmarks;
+        const w = overlay.width;
+        const h = overlay.height;
+        ctx.clearRect(0, 0, w, h);
+        if (latestLandmarks) {
+          drawSkeleton(ctx, latestLandmarks, w, h, '#60a5fa', 0.95);
+          if (!started) {
+            badge.textContent = '摄像头已开启';
+            poseLabel.textContent = '准备开始';
+          }
+        } else {
+          badge.textContent = '等待人体进入';
+          if (!started && !finished) {
+            poseLabel.textContent = '正在等待人体进入画面';
+          }
+        }
+      });
+
+      async function start() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+          video.srcObject = stream;
+          await video.play();
+          badge.textContent = '摄像头已开启';
+          const camera = new Camera(video, {
+            onFrame: async () => { await pose.send({ image: video }); },
+            width: 1280,
+            height: 720,
+          });
+          camera.start();
+          animationTimer = setInterval(() => {
+            if (!finished) drawStickman(beatIndex);
+            updateStatus();
+          }, 60);
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          setTimeout(startCountdown, 700);
+        } catch (err) {
+          badge.textContent = '摄像头启动失败';
+          poseLabel.textContent = '无法访问摄像头';
+          poseDesc.textContent = String(err);
+        }
+      }
+
+      document.getElementById('closeBtn')?.addEventListener('click', () => {
+        if (window.pawpause?.closeExercise) {
+          window.pawpause.closeExercise();
+        } else {
+          window.close();
+        }
+      });
+
+      replayBtn.addEventListener('click', async () => {
+        resultPanel.classList.remove('show');
+        clearInterval(countdownTimer);
+        clearInterval(metronomeTimer);
+        stateHistory.length = 0;
+        beatScores.length = 0;
+        beatIndex = 0;
+        countdownValue = null;
+        finished = false;
+        started = false;
+        latestLandmarks = lastValidLandmarks || latestLandmarks;
+        if (audioCtx && audioCtx.state === 'suspended') {
+          try { await audioCtx.resume(); } catch (_) {}
+        }
+        updateStatus();
+        setTimeout(startCountdown, 120);
+      });
+
+      start();
+    </script>
+  </body>
+</html>

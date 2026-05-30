@@ -25,7 +25,7 @@ corepack pnpm dev
 Electron 桌宠会浮在桌面上。颈椎小游戏页面可直接访问：
 
 ```text
-http://localhost:5173/#exercise
+http://localhost:5173/game1.html
 ```
 
 生产构建检查：

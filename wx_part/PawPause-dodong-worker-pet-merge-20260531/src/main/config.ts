@@ -29,7 +29,14 @@ export const EXERCISE_WINDOW = {
 
 export const PRELOAD_PATH = join(__dirname, "../preload/index.cjs");
 export const RENDERER_HTML_PATH = join(__dirname, "../renderer/index.html");
+export const EXERCISE_GAME_HTML_PATH = join(__dirname, "../renderer/game1.html");
 export const IS_DEV = Boolean(process.env.ELECTRON_RENDERER_URL);
+
+export function exerciseGameUrl(): string {
+  const devServer = process.env.ELECTRON_RENDERER_URL;
+  if (devServer) return `${devServer}/game1.html`;
+  return EXERCISE_GAME_HTML_PATH;
+}
 
 export const DISTRACTION_CHECK_INTERVAL_MS = 3000;
 export const DISTRACTION_WARNING_COOLDOWN_MS = 60_000;

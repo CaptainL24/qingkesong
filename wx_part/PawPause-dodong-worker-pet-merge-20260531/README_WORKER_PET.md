@@ -23,10 +23,10 @@ corepack pnpm install
 corepack pnpm dev
 ```
 
-Electron 桌宠会浮在桌面上。颈椎小游戏页面可直接访问：
+Electron 桌宠会浮在桌面上。颈椎小游戏（八拍 MediaPipe 版）会在点击桌宠、气泡按钮或托盘菜单时打开；开发模式下也可直接访问：
 
 ```text
-http://localhost:5173/#exercise
+http://localhost:5173/game1.html
 ```
 
 生产构建检查：

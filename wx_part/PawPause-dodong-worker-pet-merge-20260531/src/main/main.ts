@@ -37,6 +37,8 @@ import {
   DISTRACTION_CHECK_INTERVAL_MS,
   DISTRACTION_WARNING_COOLDOWN_MS,
   EXERCISE_WINDOW,
+  EXERCISE_GAME_HTML_PATH,
+  exerciseGameUrl,
   IS_DEV,
   PET_WINDOW,
   PRELOAD_PATH,
@@ -797,7 +799,7 @@ function setPetScaleOverride(scale: number | null): void {
   publishSnapshot();
 }
 
-type RendererRoute = "pet" | "settings" | "exercise";
+type RendererRoute = "pet" | "settings";
 
 function rendererUrl(route: RendererRoute): string {
   const devServer = process.env.ELECTRON_RENDERER_URL;
@@ -1041,7 +1043,11 @@ function createExerciseWindow(): void {
     }
   });
 
-  loadRenderer(exerciseWindow, "exercise");
+  if (process.env.ELECTRON_RENDERER_URL) {
+    void exerciseWindow.loadURL(exerciseGameUrl());
+  } else {
+    void exerciseWindow.loadFile(EXERCISE_GAME_HTML_PATH);
+  }
   exerciseWindow.once("ready-to-show", () => {
     exerciseWindow?.show();
   });
@@ -4482,6 +4488,11 @@ function registerIpc(): void {
   ipcMain.on("focus:start", startFocusMode);
   ipcMain.on("focus:stop", () => stopFocusMode(false));
   ipcMain.on("exercise:open", createExerciseWindow);
+  ipcMain.on("exercise:close", () => {
+    if (exerciseWindow && !exerciseWindow.isDestroyed()) {
+      exerciseWindow.close();
+    }
+  });
   ipcMain.on("exercise:complete", (_event, score: number) => {
     const roundedScore = Math.max(0, Math.round(Number.isFinite(score) ? score : 0));
     workerActivityActive = false;

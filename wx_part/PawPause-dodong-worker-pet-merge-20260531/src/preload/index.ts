@@ -48,6 +48,7 @@ const api = {
   startFocus: (): void => ipcRenderer.send("focus:start"),
   stopFocus: (): void => ipcRenderer.send("focus:stop"),
   openExercise: (): void => ipcRenderer.send("exercise:open"),
+  closeExercise: (): void => ipcRenderer.send("exercise:close"),
   exerciseComplete: (score: number): void => ipcRenderer.send("exercise:complete", score),
   startScreenBlock: (): void => ipcRenderer.send("break:start-screen-block"),
   endScreenBlock: (): void => ipcRenderer.send("break:end-screen-block"),
