@@ -11,6 +11,14 @@ import health_bridge
 app = Flask(__name__)
 
 
+def process_captured_image(image: Image.Image) -> dict:
+    health_bridge.emit_analyzing()
+    analysis = camera_ai.check_image(image)
+    event = health_bridge.notify_analysis_result(analysis)
+    print(f"[browser_photo] analysis={analysis.get('emotion_label')} heavy={analysis.get('banwei_heavy')}", flush=True)
+    return {"analysis": analysis, "event": event}
+
+
 @app.route("/signal", methods=["GET"])
 def signal():
     with camera_ai.capture_lock:
@@ -35,10 +43,8 @@ def upload():
     except (ValueError, UnidentifiedImageError, IndexError, base64.binascii.Error) as e:
         return jsonify({"ok": False, "error": f"invalid image: {e}"}), 400
 
-    health_bridge.emit_analyzing()
-    analysis = camera_ai.check_image(image)
-    event = health_bridge.notify_analysis_result(analysis)
-    return jsonify({"ok": True, "analysis": analysis, "event": event})
+    result = process_captured_image(image)
+    return jsonify({"ok": True, **result})
 
 
 @app.route("/")

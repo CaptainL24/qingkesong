@@ -2,7 +2,7 @@
 
 browser_photo_backup.py大概是一个比较全的流程，其它的代码主要是把这个脚本拆开了方便测试
 
-browser_photo.py可以实现浏览器调起、拍照、AI 检测，并通过 `health_bridge.py` 把事件写入桌宠 JSONL
+browser_photo.py会自动打开浏览器调摄像头、拍照、AI 检测，并通过 `health_bridge.py` 把事件写入桌宠 JSONL
 
 camera_ai.py可以实现接ai判断“班味重不重”
 
