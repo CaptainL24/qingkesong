@@ -40,6 +40,9 @@ import {
   EXERCISE_GAME_HTML_PATH,
   exerciseGameUrl,
   IS_DEV,
+  LAUNCH_HTML_PATH,
+  LAUNCH_WINDOW,
+  launchPageUrl,
   PET_WINDOW,
   PRELOAD_PATH,
   RENDERER_HTML_PATH,
@@ -185,6 +188,7 @@ const store = new Store<StoreSchema>({
 
 let petWindow: Electron.BrowserWindow | null = null;
 let settingsWindow: Electron.BrowserWindow | null = null;
+let launchWindow: Electron.BrowserWindow | null = null;
 let exerciseWindow: Electron.BrowserWindow | null = null;
 let tray: Electron.Tray | null = null;
 let petState: PetState = "idle";
@@ -1005,6 +1009,51 @@ function createSettingsWindow(): void {
   });
   settingsWindow.on("closed", () => {
     settingsWindow = null;
+  });
+}
+
+function createLaunchWindow(): void {
+  if (launchWindow && !launchWindow.isDestroyed()) {
+    launchWindow.focus();
+    return;
+  }
+
+  launchWindow = new BrowserWindow({
+    width: LAUNCH_WINDOW.width,
+    height: LAUNCH_WINDOW.height,
+    title: "PawPause",
+    resizable: true,
+    minWidth: 960,
+    minHeight: 640,
+    show: false,
+    icon: runtimeAssetPath("tray-icon.png"),
+    backgroundColor: "#ffffff",
+    ...(process.platform === "darwin"
+      ? { titleBarStyle: "hiddenInset" as const, trafficLightPosition: { x: 14, y: 14 } }
+      : {}),
+    webPreferences: {
+      preload: PRELOAD_PATH,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+      webSecurity: !IS_DEV
+    }
+  });
+
+  if (process.env.ELECTRON_RENDERER_URL) {
+    void launchWindow.loadURL(launchPageUrl());
+  } else {
+    void launchWindow.loadFile(LAUNCH_HTML_PATH);
+  }
+
+  launchWindow.once("ready-to-show", () => {
+    launchWindow?.show();
+  });
+  launchWindow.on("closed", () => {
+    launchWindow = null;
+    if (!petWindow || petWindow.isDestroyed()) {
+      app.quit();
+    }
   });
 }
 
@@ -4553,7 +4602,7 @@ app.whenReady().then(() => {
   getStats();
   restoreFocusSession();
   registerIpc();
-  createPetWindow();
+  createLaunchWindow();
   createTray();
   scheduleReminderTimers();
   scheduleDistractionDetection();
@@ -4568,7 +4617,15 @@ app.whenReady().then(() => {
   }
 
   app.on("activate", () => {
-    if (!petWindow) createPetWindow();
+    if (petWindow && !petWindow.isDestroyed()) {
+      petWindow.showInactive();
+      return;
+    }
+    if (!launchWindow || launchWindow.isDestroyed()) {
+      createLaunchWindow();
+    } else {
+      launchWindow.focus();
+    }
   });
 });
 
