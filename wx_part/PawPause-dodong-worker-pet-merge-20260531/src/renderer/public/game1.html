@@ -476,11 +476,18 @@
         }
       }
 
+      function ensureAnimationLoop() {
+        clearInterval(animationTimer);
+        animationTimer = setInterval(() => {
+          if (!finished) drawStickman(beatIndex);
+          updateStatus();
+        }, 60);
+      }
+
       function finishGame() {
         finished = true;
         countdownValue = null;
         clearInterval(beatTimer);
-        clearInterval(animationTimer);
         clearInterval(countdownTimer);
         clearInterval(metronomeTimer);
         const perfect = beatScores.filter((x) => x === 'perfect').length;
@@ -643,10 +650,7 @@
             height: 720,
           });
           camera.start();
-          animationTimer = setInterval(() => {
-            if (!finished) drawStickman(beatIndex);
-            updateStatus();
-          }, 60);
+          ensureAnimationLoop();
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           setTimeout(startCountdown, 700);
         } catch (err) {
@@ -678,6 +682,7 @@
         if (audioCtx && audioCtx.state === 'suspended') {
           try { await audioCtx.resume(); } catch (_) {}
         }
+        ensureAnimationLoop();
         updateStatus();
         setTimeout(startCountdown, 120);
       });
