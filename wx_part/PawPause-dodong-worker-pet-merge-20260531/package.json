@@ -1,0 +1,110 @@
+{
+  "name": "pawpause",
+  "version": "1.0.9",
+  "description": "A pixel desktop pet that helps you pause before you burn out.",
+  "author": "zebangeth",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.33.2",
+  "main": "out/main/main.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "corepack pnpm typecheck && electron-vite build",
+    "typecheck": "tsc --noEmit",
+    "dist": "corepack pnpm build && electron-builder --mac --win --publish never",
+    "dist:mac": "corepack pnpm build && electron-builder --mac --publish never",
+    "dist:mac:arm64": "corepack pnpm build && electron-builder --mac --arm64 --publish never",
+    "dist:mac:x64": "corepack pnpm build && electron-builder --mac --x64 --publish never",
+    "dist:win": "corepack pnpm build && electron-builder --win --x64 --publish never"
+  },
+  "build": {
+    "appId": "com.pawpause.app",
+    "productName": "PawPause",
+    "afterPack": "scripts/after-pack.js",
+    "afterSign": "scripts/notarize.js",
+    "afterAllArtifactBuild": "scripts/notarize-artifacts.js",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "forceCodeSigning": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+      "notarize": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "PawPause uses the camera only when you start the neck exercise game, so it can react to your movement locally.",
+        "NSAppleEventsUsageDescription": "PawPause uses Apple Events to ask System Events which app and window are currently active, so distraction detection can warn you when blocked apps or keywords appear."
+      }
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "dmg": {
+      "sign": true,
+      "title": "PawPause",
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "files": [
+      "out/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "build/tray-icon.png",
+        "to": "tray-icon.png"
+      },
+      {
+        "from": "build/trayTemplate.png",
+        "to": "trayTemplate.png"
+      },
+      {
+        "from": "petdex_pets",
+        "to": "petdex_pets"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-store": "^10.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@electron/notarize": "^3.1.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "electron": "^39.2.5",
+    "electron-builder": "^26.8.1",
+    "electron-vite": "^4.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
+  }
+}
