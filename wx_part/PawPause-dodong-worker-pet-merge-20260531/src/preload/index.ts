@@ -27,6 +27,7 @@ const api = {
   importPetPackage: (): Promise<PetImportResult> => ipcRenderer.invoke("pet:import-package"),
   listInstalledPets: (): Promise<InstalledPet[]> => ipcRenderer.invoke("pet:list-installed"),
   selectPet: (petId: string): void => ipcRenderer.send("pet:select", petId),
+  confirmPetSelection: (petId: string): void => ipcRenderer.send("launch:confirm", petId),
   petClicked: (): void => ipcRenderer.send("pet:clicked"),
   petContextMenu: (): void => ipcRenderer.send("pet:context-menu"),
   petDragStart: (offset: { offsetX: number; offsetY: number }): void =>

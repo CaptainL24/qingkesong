@@ -189,6 +189,7 @@ const store = new Store<StoreSchema>({
 let petWindow: Electron.BrowserWindow | null = null;
 let settingsWindow: Electron.BrowserWindow | null = null;
 let launchWindow: Electron.BrowserWindow | null = null;
+let launchSelectionConfirmed = false;
 let exerciseWindow: Electron.BrowserWindow | null = null;
 let tray: Electron.Tray | null = null;
 let petState: PetState = "idle";
@@ -412,9 +413,7 @@ function getSettings(): Settings {
   const stored = store.get("settings");
   const installedPets = mergeInstalledPets(stored.installedPets);
   const candidatePetId =
-    WORKER_PET_MODE
-      ? DEFAULT_SETTINGS.selectedPetId
-      : typeof stored.selectedPetId === "string" && stored.selectedPetId
+    typeof stored.selectedPetId === "string" && stored.selectedPetId
       ? stored.selectedPetId
       : DEFAULT_SETTINGS.selectedPetId;
   const selectedPetId = allPets(installedPets).some((pet) => pet.slug === candidatePetId)
@@ -500,7 +499,7 @@ function setSettings(next: Settings): void {
   const normalized = {
     ...next,
     language: resolveLanguage(next.language),
-    petAppearanceId: WORKER_PET_MODE ? DEFAULT_SETTINGS.selectedPetId : next.selectedPetId,
+    petAppearanceId: next.selectedPetId,
     petScale: WORKER_PET_MODE ? 0.7 : normalizePetScale(next.petScale),
     petRoamEnabled: Boolean(next.petRoamEnabled),
     petRoamDirection: normalizeRoamDirection(next.petRoamDirection),
@@ -519,7 +518,7 @@ function setSettings(next: Settings): void {
     agentActivityEnabled: WORKER_PET_MODE ? false : Boolean(next.agentActivityEnabled),
     agentCompletionSoundEnabled: WORKER_PET_MODE ? false : Boolean(next.agentCompletionSoundEnabled),
     distractionDetectionEnabled: WORKER_PET_MODE ? false : Boolean(next.distractionDetectionEnabled),
-    selectedPetId: WORKER_PET_MODE ? DEFAULT_SETTINGS.selectedPetId : next.selectedPetId,
+    selectedPetId: next.selectedPetId,
     installedPets: mergeInstalledPets(next.installedPets)
   };
   store.set("settings", normalized);
@@ -1051,10 +1050,37 @@ function createLaunchWindow(): void {
   });
   launchWindow.on("closed", () => {
     launchWindow = null;
-    if (!petWindow || petWindow.isDestroyed()) {
+    if (!launchSelectionConfirmed && (!petWindow || petWindow.isDestroyed())) {
       app.quit();
     }
   });
+}
+
+function resolveLaunchPetId(petId: unknown): string | null {
+  const raw = typeof petId === "string" ? petId.trim() : "";
+  if (!raw) return null;
+
+  const launchRoleToPetId: Record<string, string> = {
+    beagleduodong: "dodong",
+    judy: "duo",
+    "the-weeknd": "duo",
+    dodong: "dodong",
+    duo: "duo"
+  };
+  const resolved = launchRoleToPetId[raw] ?? raw;
+  const installedPets = getSettings().installedPets;
+  return allPets(installedPets).some((pet) => pet.slug === resolved) ? resolved : null;
+}
+
+function finishLaunchAndShowPet(petId: string): void {
+  launchSelectionConfirmed = true;
+  setSettings({ ...getSettings(), selectedPetId: petId, petAppearanceId: petId });
+  createPetWindow();
+  if (launchWindow && !launchWindow.isDestroyed()) {
+    launchWindow.close();
+  }
+  launchWindow = null;
+  publishSnapshot();
 }
 
 function createExerciseWindow(): void {
@@ -4511,6 +4537,11 @@ function registerIpc(): void {
   ipcMain.handle("pet:list-installed", () => getSettings().installedPets);
   ipcMain.on("pet:select", (_event, petId: string) => {
     setSettings({ ...getSettings(), selectedPetId: petId });
+  });
+  ipcMain.on("launch:confirm", (_event, petId: string) => {
+    const resolvedPetId = resolveLaunchPetId(petId);
+    if (!resolvedPetId) return;
+    finishLaunchAndShowPet(resolvedPetId);
   });
   ipcMain.on("break:start-screen-block", startBreakRun);
   ipcMain.on("break:end-screen-block", finishBreakRun);
