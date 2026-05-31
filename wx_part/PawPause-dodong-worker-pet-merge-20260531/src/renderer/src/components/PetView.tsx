@@ -182,8 +182,6 @@ export function PetView(): JSX.Element {
     return () => window.pawpause.setWorkerDemoPanelOpen(false);
   }, [demoPanelOpen, lyricsModeEnabled]);
 
-  useEffect(() => () => window.pawpause.setHoverStatsVisible(false), []);
-
   useEffect(() => {
     if (!lyricsModeEnabled) return;
     const drag = dragRef.current;
@@ -360,18 +358,12 @@ export function PetView(): JSX.Element {
         onMouseEnter={
           lyricsModeEnabled || snapshot.screenBlockActive
             ? undefined
-            : () => {
-                window.pawpause.setHoverStatsVisible(true);
-                setHoverStatsVisible(true);
-              }
+            : () => setHoverStatsVisible(true)
         }
         onMouseLeave={
           lyricsModeEnabled || snapshot.screenBlockActive
             ? undefined
-            : () => {
-                window.pawpause.setHoverStatsVisible(false);
-                setHoverStatsVisible(false);
-              }
+            : () => setHoverStatsVisible(false)
         }
         onPointerCancel={lyricsModeEnabled ? undefined : cancelPointer}
         onPointerDown={lyricsModeEnabled ? undefined : startPointer}

@@ -261,7 +261,6 @@ let healthBridgePrimed = false;
 let meetingCompactActive = false;
 let workerActivityActive = false;
 let workerDemoPanelOpen = false;
-let hoverStatsVisible = false;
 const agentSeenEventIds = new Set<string>();
 const healthSeenEventIds = new Set<string>();
 const healthEventFileCursors = new Map<string, HealthEventFileCursor>();
@@ -378,6 +377,14 @@ function visiblePetSize(scale: number): Pick<Electron.Rectangle, "width" | "heig
 
 function compactPetWindowSize(scale = getSettings().petScale): Pick<Electron.Rectangle, "width" | "height"> {
   const petSize = visiblePetSize(scale);
+  // Keep enough space for hover stats above the pet so hover does not resize the window
+  // (resizing on mouseenter/mouseleave caused flicker and position jitter).
+  if (WORKER_PET_MODE) {
+    return {
+      width: Math.max(BUBBLE_WINDOW_WIDTH, petSize.width + PET_WINDOW_PADDING * 2),
+      height: petSize.height + BUBBLE_WINDOW_EXTRA_HEIGHT
+    };
+  }
   return {
     width: Math.max(COUNTDOWN_BADGE_MIN_WINDOW_WIDTH, petSize.width + PET_WINDOW_PADDING),
     height: Math.max(48, petSize.height + PET_WINDOW_PADDING)
@@ -385,7 +392,7 @@ function compactPetWindowSize(scale = getSettings().petScale): Pick<Electron.Rec
 }
 
 function needsExpandedPetWindow(): boolean {
-  return Boolean(currentBubble) || workerDemoPanelOpen || hoverStatsVisible;
+  return Boolean(currentBubble) || workerDemoPanelOpen;
 }
 
 function petWindowSize(
@@ -4595,10 +4602,6 @@ function registerIpc(): void {
   ipcMain.on("worker-demo:trigger", (_event, state: WorkerDemoState) => triggerWorkerDemo(state));
   ipcMain.on("worker-demo-panel:set-open", (_event, open: boolean) => {
     workerDemoPanelOpen = Boolean(open);
-    resizePetWindowForScale(currentPetDisplayScale(), needsExpandedPetWindow());
-  });
-  ipcMain.on("hover-stats:set-visible", (_event, visible: boolean) => {
-    hoverStatsVisible = Boolean(visible);
     resizePetWindowForScale(currentPetDisplayScale(), needsExpandedPetWindow());
   });
   ipcMain.on("focus:start", startFocusMode);
