@@ -170,4 +170,4 @@ export STEP_BASE_URL=https://api.stepfun.com/v1
 
 ## 目录命名说明
 
-仓库保留 `wx_part`、`zyj_part` 作为子模块目录名，便于对应分工与 git 历史。**不建议在展示前批量重命名**：实际硬编码路径仅出现在根目录 `start.sh`，改名收益有限，但会导致 git 大量 rename 记录。若日后需要更友好的对外名称，可在 README 中使用中文别名说明，或在项目稳定后用 `git mv` 一次性重命名并同步更新 `start.sh`。
+仓库保留 `wx_part`、`zyj_part` 作为子模块目录名，便于对应分工与 git 历史。
