@@ -1,6 +1,6 @@
 # 清客松（qingkesong）
 
-比格多栋打工人防久坐原型：桌面桌宠 + 班味拍照分析链路，通过本地 JSONL 事件流联动。
+比格多栋打工人防久坐原型：桌面桌宠 + 班味拍照分析 + **规则 Agent 决策**，通过本地 JSONL 事件流联动。
 
 ## 项目结构
 
@@ -9,21 +9,42 @@ qingkesong/
 ├── start.sh                 # 一键启动（推荐）
 ├── wx_part/                 # 桌宠端（Electron + React）
 │   └── PawPause-dodong-worker-pet-merge-20260531/
-│       └── README_WORKER_PET.md   # 桌宠详细说明
-├── zyj_part/                # 班味链路（Python Flask + AI）
-│   └── README.md                  # 脚本与网页说明
+│       └── README_WORKER_PET.md   # 桌宠状态与 UI 说明
+├── zyj_part/                # 班味链路 + Agent（Python Flask + AI）
+│   └── README.md                  # Agent 决策与脚本说明
 └── frontend_web/            # 启动页静态资源（已合入 wx_part launch 页）
 ```
 
 | 目录 | 职责 | 技术栈 |
 |------|------|--------|
-| `wx_part` | 桌面比格多栋桌宠，消费健康事件，展示班味提醒与颈椎小游戏 | Electron、React、Vite |
-| `zyj_part` | 键盘活跃检测、浏览器拍照、AI 班味分析，写入事件流 | Python、Flask、pynput、StepFun API |
+| `wx_part` | 桌面比格多栋桌宠，消费健康事件，维护宠物状态与今日统计 | Electron、React、Vite |
+| `zyj_part` | 键盘活跃、拍照、AI 分析、**Agent 选工具写事件** | Python、Flask、pynput、StepFun API |
 
-两端通过本地文件通信，默认路径：
+## 架构与通信
 
-```text
-~/.local/share/pawpause/health-events.jsonl
+两端不直接 HTTP 对接，通过两个本地文件解耦：
+
+| 文件 | 写入方 | 读取方 | 用途 |
+|------|--------|--------|------|
+| `~/.local/share/pawpause/health-events.jsonl` | zyj_part (`health_bridge`) | wx_part (`main.ts` health bridge) | 桌宠状态事件 |
+| `~/.local/share/pawpause/agent-memory.json` | zyj_part (`memory`) | zyj_part (`orchestrator`) | 当日提醒次数、冷却、是否已做操 |
+
+```mermaid
+flowchart LR
+    subgraph zyj [zyj_part]
+        KB[键盘监听] --> PHOTO[浏览器拍照]
+        PHOTO --> AI[StepFun 视觉分析]
+        AI --> AGENT[orchestrator]
+        MEM[(agent-memory.json)] <--> AGENT
+        AGENT --> HB[health_bridge]
+    end
+    subgraph wx [wx_part]
+        HB --> JSONL[(health-events.jsonl)]
+        JSONL --> PET[桌宠状态机]
+        PET --> UI[比格多栋 + 气泡]
+        GAME[颈椎小游戏] --> STATS[今日统计]
+    end
+    HB --> JSONL
 ```
 
 ## 环境要求
@@ -102,25 +123,39 @@ python browser_photo.py
 
 ## 演示流程简述
 
-1. 桌宠启动后，比格多栋显示在桌面。
-2. 班味页在浏览器中打开摄像头；键盘活跃达到条件后自动拍照。
-3. AI 分析结果经 `health_bridge.py` 写入 JSONL。
-4. 桌宠读取事件，展示班味等级（低 / 中 / 高）或颈椎引导状态。
-5. 点击桌宠或气泡可打开颈椎小游戏（`game1_v2.html`）。
+1. 桌宠启动后，比格多栋显示在桌面（默认 70% 尺寸）。
+2. 班味页在浏览器中打开摄像头；键盘持续活跃达到条件后自动拍照。
+3. `camera_ai` 调用 StepFun 分析表情/姿态，输出 `emotion_label` + `banwei_heavy`。
+4. **Agent（`orchestrator`）** 根据当日 memory 决策：
+   - 第一次检测 → 温和 `banwei_result` 提醒；
+   - 复检且班味仍重 → `neck_guide` 引导颈椎操；
+   - 冷却期内或今日已做操 → 静默 `noop`。
+5. 决策结果经 `health_bridge` 写入 JSONL；桌宠每 5 秒 tail 新事件并切换状态。
+6. 点击桌宠或气泡打开颈椎小游戏；完成后桌宠更新今日次数与活力值。
+7. 鼠标悬停桌宠可查看「今日颈椎操 X 次 / 活力 Y」。
 
-跳过摄像头、仅测桌宠对接：
+### 跳过摄像头测试
+
+**Agent 完整用例**（推荐，需桌宠在跑）：
+
+```bash
+cd zyj_part && source .venv/bin/activate && python test_orchestrator.py
+```
+
+**单次冒烟**：
 
 ```bash
 cd zyj_part && source .venv/bin/activate && python test_ui_flow.py
 ```
-
-（需桌宠已在运行。）
 
 ## 可选环境变量
 
 ```bash
 # 自定义 JSONL 路径（wx / zyj 共用）
 export PAWPAUSE_HEALTH_EVENTS=/absolute/path/to/health-events.jsonl
+
+# Agent 当日记忆（仅 zyj_part）
+export PAWPAUSE_AGENT_MEMORY=/absolute/path/to/agent-memory.json
 
 # StepFun 模型与接口（默认 step-3.7-flash）
 export STEP_MODEL=step-3.7-flash
@@ -129,8 +164,8 @@ export STEP_BASE_URL=https://api.stepfun.com/v1
 
 ## 进一步阅读
 
-- 桌宠能力与事件格式：[wx_part/README_WORKER_PET.md](wx_part/README_WORKER_PET.md)
-- 班味脚本与网页模板：[zyj_part/README.md](zyj_part/README.md)
+- 桌宠状态机、事件格式、交互说明：[wx_part/README_WORKER_PET.md](wx_part/README_WORKER_PET.md)
+- Agent 决策规则、memory 字段、脚本说明：[zyj_part/README.md](zyj_part/README.md)
 - Health Bridge 协议：[wx_part/PawPause-dodong-worker-pet-merge-20260531/docs/HEALTH_BRIDGE.md](wx_part/PawPause-dodong-worker-pet-merge-20260531/docs/HEALTH_BRIDGE.md)
 
 ## 目录命名说明

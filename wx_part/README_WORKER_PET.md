@@ -1,144 +1,28 @@
 # 比格多栋打工人防久坐桌宠 MVP
 
-这是基于 PawPause 改造的内部原型版桌宠，用于承接飞书日历、键鼠活跃、拍照班味分析链路，并在桌面上用“比格多栋”风格小狗做低打扰提醒。
+这是基于 PawPause 改造的内部原型版桌宠，用于承接外部健康事件（班味分析 Agent、飞书日历等），并在桌面上用「比格多栋」风格小狗做低打扰提醒。
 
-![比格多栋状态预览](assets/dodong-states/preview-contact-sheet.png)
+完整说明（状态机、统计、Agent 协作、测试命令）见项目内文档：
 
-## 现在能做什么
+**[PawPause-dodong-worker-pet-merge-20260531/README_WORKER_PET.md](PawPause-dodong-worker-pet-merge-20260531/README_WORKER_PET.md)**
 
-- 默认显示小号比格多栋桌宠，约 70% 尺寸。
-- 会议中缩成豆包式悬浮球，不弹提醒。
-- 连续键鼠活跃 30 分钟后，由外部链路拍照分析班味，再把结果写入本地事件流。
-- 班味分为 `low`、`medium`、`high` 三档。
-- 第一次班味检测只弹温和提醒，不强制打开游戏。
-- 之后复检仍有班味时，外部链路发送 `neck_guide`，桌宠进入颈椎活动引导状态。
-- 点击桌宠或气泡按钮，打开颈椎小游戏窗口。
-- 不展示照片，只展示班味结论和建议。
-
-## 运行方式
+## 快速启动
 
 ```sh
+cd PawPause-dodong-worker-pet-merge-20260531
 corepack pnpm install
 corepack pnpm dev
 ```
 
-Electron 桌宠会浮在桌面上。颈椎小游戏页面可直接访问：
-
-```text
-http://localhost:5173/game1.html
-```
-
-生产构建检查：
+或与 zyj_part 一起在仓库根目录：
 
 ```sh
-corepack pnpm typecheck
-corepack pnpm build
+./start.sh
 ```
 
-## 本地事件流
+## 核心能力摘要
 
-桌宠不直接接飞书、键鼠或摄像头。外部链路只需要把 JSONL 事件追加到本地文件：
-
-```text
-~/.local/share/pawpause/health-events.jsonl
-```
-
-也可以用环境变量覆盖：
-
-```sh
-PAWPAUSE_HEALTH_EVENTS=/absolute/path/to/health-events.jsonl
-```
-
-事件格式：
-
-```json
-{
-  "id": "stable-event-id",
-  "type": "banwei_result",
-  "timestampMs": 1780110000000,
-  "payload": {
-    "banweiLevel": "medium",
-    "banweiScore": 72,
-    "message": "班味有点上来了，先伸个懒腰压一压。",
-    "suggestedAction": "none"
-  }
-}
-```
-
-支持的 `type`：
-
-- `meeting_start`：进入会议悬浮球，会议期间静默丢弃其他提醒。
-- `meeting_end`：恢复普通桌宠。
-- `work_active`：进入认真工作状态，不弹气泡。
-- `analyzing`：短暂显示分析中状态。
-- `banwei_result`：展示低/中/高班味温和提醒，不打开小游戏。
-- `neck_guide`：进入颈椎引导状态，气泡按钮打开小游戏。
-- `exercise_done`：展示完成反馈，然后回到默认状态。
-
-## 快速测试
-
-```sh
-mkdir -p ~/.local/share/pawpause
-```
-
-会议悬浮球：
-
-```sh
-printf '%s\n' '{"id":"demo-meeting-start","type":"meeting_start"}' >> ~/.local/share/pawpause/health-events.jsonl
-printf '%s\n' '{"id":"demo-meeting-end","type":"meeting_end"}' >> ~/.local/share/pawpause/health-events.jsonl
-```
-
-第一次班味提醒：
-
-```sh
-printf '%s\n' '{"id":"demo-banwei-medium","type":"banwei_result","payload":{"banweiLevel":"medium","banweiScore":72,"message":"班味有点上来了，先伸个懒腰压一压。"}}' >> ~/.local/share/pawpause/health-events.jsonl
-```
-
-颈椎引导：
-
-```sh
-printf '%s\n' '{"id":"demo-neck-guide","type":"neck_guide","payload":{"message":"复检还是有班味，多栋开始带你活动颈椎了。","suggestedAction":"exercise"}}' >> ~/.local/share/pawpause/health-events.jsonl
-```
-
-注意：`id` 会去重。重复测试时请换一个新的 `id`。
-
-## 比格狗 UI 素材
-
-透明底 PNG 已生成在：
-
-```text
-assets/dodong-states/transparent/
-```
-
-包含：
-
-- `idle.png`
-- `meeting-compact.png`
-- `working.png`
-- `analyzing.png`
-- `banwei-low.png`
-- `banwei-medium.png`
-- `banwei-high.png`
-- `neck-guide.png`
-- `exercise-done.png`
-
-原始绿幕图保存在：
-
-```text
-assets/dodong-states/raw/
-```
-
-状态素材 prompt 记录在：
-
-```text
-docs/DODONG_STATE_PROMPTS.md
-```
-
-## 研发合并提示
-
-- 主入口仍是 Electron + React + Vite。
-- 旧 PawPause 的喝水、专注、AI agent、分心检测等主动逻辑已在 worker pet 模式下关闭。
-- 当前默认宠物为 `dodong`，并强制小尺寸 `0.7`。
-- 当前代码里同时保留 CSS 版原型小狗和 PNG 状态素材。PNG 适合作为后续替换成正式 spritesheet 的资产基础。
-- 如果未来要对外上线或商用，需要确认“比格多栋”IP 授权，或替换为原创比格犬形象。
-
+- 消费 `~/.local/share/pawpause/health-events.jsonl`，切换比格多栋状态（idle / 会议球 / 陪工 / 分析 / 班味 / 颈椎引导 / 完成）。
+- 第一次班味温和提醒，复检班味重时引导颈椎操；点击桌宠或气泡打开 `game1_v2.html`。
+- 悬停显示今日颈椎操次数与活力值；双击打开现场演示面板。
+- zyj_part Agent 负责决策写哪些事件，详见 [../zyj_part/README.md](../zyj_part/README.md).

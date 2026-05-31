@@ -61,3 +61,29 @@ printf '%s\n' '{"id":"demo-neck","type":"neck_guide","payload":{"message":"复�
 ```
 
 The pet should react within a few seconds. Clicking the pet or the `neck_guide` bubble action opens the neck exercise window.
+
+## Agent Integration (zyj_part)
+
+When using the bundled Python agent (`zyj_part/orchestrator.py`), events are emitted in this order per capture:
+
+1. `analyzing` — always first (`run_with_analyzing`)
+2. Then one of:
+   - `banwei_result` — first check of the day, or banwei level escalated after cooldown
+   - `neck_guide` — recheck with `banwei_heavy: true` (not the first check)
+   - _(no event)_ — `noop` when cooldown active or `exercise_done_today` in agent memory
+
+Agent-side daily memory lives at `~/.local/share/pawpause/agent-memory.json` (override with `PAWPAUSE_AGENT_MEMORY`). See [zyj_part/README.md](../../../../zyj_part/README.md) for decision rules.
+
+Recommended integration test (pet must be running):
+
+```sh
+cd zyj_part && source .venv/bin/activate && python test_orchestrator.py
+```
+
+## Pet-Side State Notes
+
+- Events are tail-read every 5 seconds; duplicate `id` values are ignored.
+- During `meeting_start`, all events except `meeting_end` are dropped.
+- After temporary states (`analyzing`, `banwei_result`, etc.), the pet returns to `idle`, `working`, or `meetingCompact` depending on internal flags.
+- Completing the neck exercise game updates `exerciseSessions` and `exerciseTotalScore` in the pet app; hover the pet to see today's totals.
+- External `exercise_done` events are supported but the pet also shows completion feedback when the game finishes locally via IPC.
