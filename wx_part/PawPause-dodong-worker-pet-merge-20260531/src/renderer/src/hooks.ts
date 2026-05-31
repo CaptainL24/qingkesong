@@ -7,7 +7,9 @@ const initialStats: TodayStats = {
   breaksTaken: 0,
   watersLogged: 0,
   focusMinutes: 0,
-  focusWarnings: 0
+  focusWarnings: 0,
+  exerciseSessions: 0,
+  exerciseTotalScore: 0
 };
 
 export function useSnapshot(): AppSnapshot {

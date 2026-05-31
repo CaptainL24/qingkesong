@@ -261,6 +261,7 @@ let healthBridgePrimed = false;
 let meetingCompactActive = false;
 let workerActivityActive = false;
 let workerDemoPanelOpen = false;
+let hoverStatsVisible = false;
 const agentSeenEventIds = new Set<string>();
 const healthSeenEventIds = new Set<string>();
 const healthEventFileCursors = new Map<string, HealthEventFileCursor>();
@@ -383,9 +384,13 @@ function compactPetWindowSize(scale = getSettings().petScale): Pick<Electron.Rec
   };
 }
 
+function needsExpandedPetWindow(): boolean {
+  return Boolean(currentBubble) || workerDemoPanelOpen || hoverStatsVisible;
+}
+
 function petWindowSize(
   scale = getSettings().petScale,
-  includeBubble = Boolean(currentBubble) || workerDemoPanelOpen
+  includeBubble = needsExpandedPetWindow()
 ): Pick<Electron.Rectangle, "width" | "height"> {
   if (!includeBubble) return compactPetWindowSize(scale);
   const petSize = visiblePetSize(scale);
@@ -541,6 +546,21 @@ function getStatsHistory(): StatsHistory {
   return store.get("statsHistory", {});
 }
 
+function normalizeStats(raw: Partial<TodayStats>, date = todayKey()): TodayStats {
+  const base = createEmptyStats(date);
+  return {
+    ...base,
+    ...raw,
+    date: raw.date ?? base.date,
+    breaksTaken: Number(raw.breaksTaken) || 0,
+    watersLogged: Number(raw.watersLogged) || 0,
+    focusMinutes: Number(raw.focusMinutes) || 0,
+    focusWarnings: Number(raw.focusWarnings) || 0,
+    exerciseSessions: Number(raw.exerciseSessions) || 0,
+    exerciseTotalScore: Number(raw.exerciseTotalScore) || 0
+  };
+}
+
 function isSameStats(left: TodayStats | undefined, right: TodayStats): boolean {
   return Boolean(
     left &&
@@ -548,7 +568,9 @@ function isSameStats(left: TodayStats | undefined, right: TodayStats): boolean {
       left.breaksTaken === right.breaksTaken &&
       left.watersLogged === right.watersLogged &&
       left.focusMinutes === right.focusMinutes &&
-      left.focusWarnings === right.focusWarnings
+      left.focusWarnings === right.focusWarnings &&
+      left.exerciseSessions === right.exerciseSessions &&
+      left.exerciseTotalScore === right.exerciseTotalScore
   );
 }
 
@@ -564,10 +586,10 @@ function saveStatsToHistory(stats: TodayStats): void {
 
 function getStats(): TodayStats {
   const today = todayKey();
-  const stats = store.get("stats", createEmptyStats());
+  const stats = normalizeStats(store.get("stats", createEmptyStats()));
   if (stats.date !== today) {
     saveStatsToHistory(stats);
-    const current = getStatsHistory()[today] ?? createEmptyStats(today);
+    const current = normalizeStats(getStatsHistory()[today] ?? createEmptyStats(today), today);
     store.set("stats", current);
     saveStatsToHistory(current);
     return current;
@@ -792,13 +814,13 @@ function hideBubble(): void {
   bubbleResizeSettleTimer = setTimeout(() => {
     bubbleResizeSettleTimer = null;
     if (renderToken !== bubbleRenderToken || currentBubble) return;
-    resizePetWindowForScale(currentPetDisplayScale(), workerDemoPanelOpen);
+    resizePetWindowForScale(currentPetDisplayScale(), needsExpandedPetWindow());
   }, BUBBLE_RESIZE_SETTLE_MS);
 }
 
 function setPetScaleOverride(scale: number | null): void {
   petScaleOverride = scale;
-  resizePetWindowForScale(currentPetDisplayScale(), Boolean(currentBubble) || workerDemoPanelOpen);
+  resizePetWindowForScale(currentPetDisplayScale(), needsExpandedPetWindow());
   publishSnapshot();
 }
 
@@ -873,7 +895,7 @@ function persistPetPosition(): void {
 
 function resizePetWindowForScale(
   scale: number,
-  includeBubble = Boolean(currentBubble) || workerDemoPanelOpen
+  includeBubble = needsExpandedPetWindow()
 ): void {
   if (!petWindow || petWindow.isDestroyed()) return;
   if (blockingMode === "breakRun" || blockingMode === "focusWarning") {
@@ -3709,6 +3731,14 @@ function rememberHealthEvent(id: string): void {
   if (typeof first === "string") healthSeenEventIds.delete(first);
 }
 
+function scheduleWorkerNeckExercise(delayMs = 2500): void {
+  if (!WORKER_PET_MODE) return;
+  setTimeout(() => {
+    if (meetingCompactActive || blockingMode) return;
+    createExerciseWindow();
+  }, delayMs);
+}
+
 function notifyBanweiResult(event: HealthBridgeEvent, id: string): void {
   if (meetingCompactActive) return;
   const payload = healthPayload(event);
@@ -3725,6 +3755,7 @@ function notifyBanweiResult(event: HealthBridgeEvent, id: string): void {
     message,
     autoDismissMs: 5000
   });
+  scheduleWorkerNeckExercise();
   setTimeout(() => {
     if (!blockingMode && !meetingCompactActive && petState === banweiState(level)) {
       hideBubble();
@@ -3750,6 +3781,7 @@ function notifyNeckGuide(event: HealthBridgeEvent, id: string): void {
     message: neckGuideMessage(event),
     actions: [{ id: "health:exercise", label: healthActionLabel("exercise"), kind: "primary" }]
   });
+  scheduleWorkerNeckExercise();
 }
 
 function notifyExerciseDone(event: HealthBridgeEvent, id: string): void {
@@ -4563,7 +4595,11 @@ function registerIpc(): void {
   ipcMain.on("worker-demo:trigger", (_event, state: WorkerDemoState) => triggerWorkerDemo(state));
   ipcMain.on("worker-demo-panel:set-open", (_event, open: boolean) => {
     workerDemoPanelOpen = Boolean(open);
-    resizePetWindowForScale(currentPetDisplayScale(), Boolean(currentBubble) || workerDemoPanelOpen);
+    resizePetWindowForScale(currentPetDisplayScale(), needsExpandedPetWindow());
+  });
+  ipcMain.on("hover-stats:set-visible", (_event, visible: boolean) => {
+    hoverStatsVisible = Boolean(visible);
+    resizePetWindowForScale(currentPetDisplayScale(), needsExpandedPetWindow());
   });
   ipcMain.on("focus:start", startFocusMode);
   ipcMain.on("focus:stop", () => stopFocusMode(false));
@@ -4575,14 +4611,26 @@ function registerIpc(): void {
   });
   ipcMain.on("exercise:complete", (_event, score: number) => {
     const roundedScore = Math.max(0, Math.round(Number.isFinite(score) ? score : 0));
+    let sessionCount = 0;
+    let totalScore = 0;
+    updateStats((stats) => {
+      sessionCount = stats.exerciseSessions + 1;
+      totalScore = stats.exerciseTotalScore + roundedScore;
+      return {
+        ...stats,
+        exerciseSessions: sessionCount,
+        exerciseTotalScore: totalScore
+      };
+    });
     workerActivityActive = false;
     meetingCompactActive = false;
     setPetScaleOverride(null);
+    const isChinese = getSettings().language === "zh-CN";
     showTemporaryHealthState(
       "exerciseDone",
-      getSettings().language === "zh-CN"
-        ? `颈椎活动完成，多栋勉强认可你一下。活力 +${roundedScore}。`
-        : `Neck reset complete. Energy +${roundedScore}.`
+      isChinese
+        ? `第 ${sessionCount} 局完成！本局 +${roundedScore}，今日活力 ${totalScore}。`
+        : `Session ${sessionCount} done! +${roundedScore} this round, ${totalScore} energy today.`
     );
   });
   ipcMain.on("stats:reset-today", resetTodayStats);

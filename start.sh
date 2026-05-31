@@ -7,7 +7,7 @@ ZYJ_DIR="$ROOT/zyj_part"
 VENV="$ZYJ_DIR/.venv"
 
 ## 添加自己的API KEY
-export STEP_API_KEY=$Your API KEY$
+export STEP_API_KEY="5TjSyZtGW4XvKKsPXqxoRza0fsGqACXXS6jExsrIX05gFk1yKVeqGM4Qcu2b7PNe9"
 
 WX_PID=""
 ZYJ_PID=""

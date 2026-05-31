@@ -6,17 +6,20 @@ import threading
 import webbrowser
 
 import camera_ai
-import health_bridge
+import orchestrator
 
 app = Flask(__name__)
 
 
 def process_captured_image(image: Image.Image) -> dict:
-    health_bridge.emit_analyzing()
     analysis = camera_ai.check_image(image)
-    event = health_bridge.notify_analysis_result(analysis)
-    print(f"[browser_photo] analysis={analysis.get('emotion_label')} heavy={analysis.get('banwei_heavy')}", flush=True)
-    return {"analysis": analysis, "event": event}
+    decision = orchestrator.run_with_analyzing(analysis)
+    print(
+        f"[browser_photo] analysis={analysis.get('emotion_label')} "
+        f"heavy={analysis.get('banwei_heavy')} tool={decision.get('tool')}",
+        flush=True,
+    )
+    return {"analysis": analysis, "decision": decision, "event": decision.get("event")}
 
 
 @app.route("/signal", methods=["GET"])

@@ -508,7 +508,9 @@ function addStats(left: TodayStats, right: TodayStats): TodayStats {
     breaksTaken: left.breaksTaken + right.breaksTaken,
     watersLogged: left.watersLogged + right.watersLogged,
     focusMinutes: left.focusMinutes + right.focusMinutes,
-    focusWarnings: left.focusWarnings + right.focusWarnings
+    focusWarnings: left.focusWarnings + right.focusWarnings,
+    exerciseSessions: left.exerciseSessions + right.exerciseSessions,
+    exerciseTotalScore: left.exerciseTotalScore + right.exerciseTotalScore
   };
 }
 
@@ -518,7 +520,9 @@ function emptyStats(date: string): TodayStats {
     breaksTaken: 0,
     watersLogged: 0,
     focusMinutes: 0,
-    focusWarnings: 0
+    focusWarnings: 0,
+    exerciseSessions: 0,
+    exerciseTotalScore: 0
   };
 }
 

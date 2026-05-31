@@ -145,6 +145,8 @@ export type TodayStats = {
   watersLogged: number;
   focusMinutes: number;
   focusWarnings: number;
+  exerciseSessions: number;
+  exerciseTotalScore: number;
 };
 
 export type StatsHistory = Record<string, TodayStats>;

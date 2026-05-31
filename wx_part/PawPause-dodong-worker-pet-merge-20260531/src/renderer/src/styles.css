@@ -595,6 +595,52 @@ textarea {
   z-index: 2;
 }
 
+.pet-hover-stats {
+  background: rgba(36, 78, 69, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  bottom: calc((208px * var(--pet-render-scale)) + 18px);
+  box-shadow: 0 10px 24px rgba(36, 78, 69, 0.22);
+  box-sizing: border-box;
+  color: #f6fff9;
+  left: var(--bubble-anchor-x);
+  max-width: min(300px, calc(100vw - 8px));
+  padding: 10px 18px;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-50%);
+  width: max-content;
+  z-index: 3;
+}
+
+.pet-hover-stats p {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  margin: 0;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pet-hover-stats__secondary {
+  font-size: 13px;
+  margin-top: 2px !important;
+}
+
+.pet-hover-stats::after {
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 8px solid rgba(36, 78, 69, 0.94);
+  bottom: -7px;
+  content: "";
+  height: 0;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  width: 0;
+}
+
 .speech-bubble--button {
   cursor: pointer;
   font: inherit;

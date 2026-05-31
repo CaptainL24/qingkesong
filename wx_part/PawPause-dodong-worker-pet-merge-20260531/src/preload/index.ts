@@ -42,6 +42,8 @@ const api = {
     ipcRenderer.send("worker-demo:trigger", state),
   setWorkerDemoPanelOpen: (open: boolean): void =>
     ipcRenderer.send("worker-demo-panel:set-open", open),
+  setHoverStatsVisible: (visible: boolean): void =>
+    ipcRenderer.send("hover-stats:set-visible", visible),
   isPackaged: !process.defaultApp,
   assetUrl: (relativePath: string): string => {
     return `pawpal-asset://asset/${encodeURIComponent(relativePath)}`;

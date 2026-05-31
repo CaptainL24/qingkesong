@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, JSX, PointerEvent } from "react";
 import { i18n, resolveLanguage } from "../../../shared/i18n";
-import type { CustomReminder, PetLayout, SpeechBubble, WorkerDemoState } from "../../../shared/types";
+import type { CustomReminder, Language, PetLayout, SpeechBubble, WorkerDemoState } from "../../../shared/types";
 import { getSelectedPetAsset } from "../assets";
 import { useNow, useSnapshot } from "../hooks";
 
@@ -25,6 +25,29 @@ const workerDemoStates: Array<{ state: WorkerDemoState; label: string }> = [
   { state: "neckGuide", label: "颈椎引导" },
   { state: "exerciseDone", label: "完成" }
 ];
+
+function exerciseHoverLines(
+  language: Language,
+  sessions: number,
+  totalScore: number
+): { primary: string; secondary?: string } {
+  if (language === "zh-CN") {
+    if (sessions <= 0) {
+      return { primary: "今日尚未完成颈椎操" };
+    }
+    return {
+      primary: `今日颈椎操：${sessions} 次`,
+      secondary: `活力 ${totalScore}`
+    };
+  }
+  if (sessions <= 0) {
+    return { primary: "No neck exercises yet today" };
+  }
+  return {
+    primary: `Neck exercises: ${sessions}`,
+    secondary: `Energy ${totalScore}`
+  };
+}
 
 function formatFocusCountdown(endsAt: number | null, now: number): string {
   const remainingSeconds = Math.max(0, Math.ceil(((endsAt ?? now) - now) / 1000));
@@ -68,7 +91,17 @@ export function PetView(): JSX.Element {
   const dragRef = useRef<DragRef | null>(null);
   const clickTimerRef = useRef<number | null>(null);
   const [demoPanelOpen, setDemoPanelOpen] = useState(false);
+  const [hoverStatsVisible, setHoverStatsVisible] = useState(false);
   const labels = i18n(resolveLanguage(snapshot.settings.language)).settings;
+  const language = resolveLanguage(snapshot.settings.language);
+  const exerciseHoverLinesText = exerciseHoverLines(
+    language,
+    snapshot.stats.exerciseSessions ?? 0,
+    snapshot.stats.exerciseTotalScore ?? 0
+  );
+  const exerciseHoverAria = exerciseHoverLinesText.secondary
+    ? `${exerciseHoverLinesText.primary}，${exerciseHoverLinesText.secondary}`
+    : exerciseHoverLinesText.primary;
 
   useEffect(() => {
     const offLayout = window.pawpause.onPetLayout(setLayout);
@@ -149,6 +182,8 @@ export function PetView(): JSX.Element {
     return () => window.pawpause.setWorkerDemoPanelOpen(false);
   }, [demoPanelOpen, lyricsModeEnabled]);
 
+  useEffect(() => () => window.pawpause.setHoverStatsVisible(false), []);
+
   useEffect(() => {
     if (!lyricsModeEnabled) return;
     const drag = dragRef.current;
@@ -218,6 +253,15 @@ export function PetView(): JSX.Element {
             }
       }
     >
+      {hoverStatsVisible && !bubble && !lyricsModeEnabled && !snapshot.screenBlockActive ? (
+        <div className="pet-hover-stats" role="status">
+          <p>{exerciseHoverLinesText.primary}</p>
+          {exerciseHoverLinesText.secondary ? (
+            <p className="pet-hover-stats__secondary">{exerciseHoverLinesText.secondary}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       {bubble ? (
         bubbleClickActionId ? (
           <button
@@ -312,6 +356,23 @@ export function PetView(): JSX.Element {
       <button
         className={`pet-button state-${state} ${facingClass}`}
         aria-disabled={lyricsModeEnabled}
+        aria-label={exerciseHoverAria}
+        onMouseEnter={
+          lyricsModeEnabled || snapshot.screenBlockActive
+            ? undefined
+            : () => {
+                window.pawpause.setHoverStatsVisible(true);
+                setHoverStatsVisible(true);
+              }
+        }
+        onMouseLeave={
+          lyricsModeEnabled || snapshot.screenBlockActive
+            ? undefined
+            : () => {
+                window.pawpause.setHoverStatsVisible(false);
+                setHoverStatsVisible(false);
+              }
+        }
         onPointerCancel={lyricsModeEnabled ? undefined : cancelPointer}
         onPointerDown={lyricsModeEnabled ? undefined : startPointer}
         onLostPointerCapture={lyricsModeEnabled ? undefined : () => finishPointerDrag(false)}
